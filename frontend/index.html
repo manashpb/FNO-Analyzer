@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FNO Analyzer</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">FNO<span>Analyzer</span></div>
+  <div class="modes">
+    <button id="modeLive" class="mode">Live</button>
+    <button id="modeHist" class="mode">Historical</button>
+    <button id="modeSectors" class="mode">Sectors</button>
+  </div>
+  <div class="controls">
+    <div id="symbolCtrls" class="ctrl-group">
+      <div class="combo">
+        <input id="symbolSearch" autocomplete="off" placeholder="Search symbol…" spellcheck="false">
+        <ul id="symbolList" class="combo-list hidden"></ul>
+      </div>
+    </div>
+    <div id="liveCtrls" class="ctrl-group">
+      <select id="sourceSelect" title="Live data source">
+        <option value="dhan">Dhan</option>
+        <option value="aoc">AOC</option>
+      </select>
+      <button id="refreshBtn" title="Refresh now">Refresh</button>
+      <label class="toggle"><input type="checkbox" id="autoToggle" checked> Auto</label>
+    </div>
+    <div id="histCtrls" class="ctrl-group hidden">
+      <select id="expirySelect" title="Expiry"></select>
+      <input type="datetime-local" id="histTime" title="Historical date & time">
+      <button id="histLoadBtn" title="Fetch historical snapshot">Load</button>
+    </div>
+  </div>
+  <button id="wlToggle" title="Toggle watchlist">Watchlist</button>
+  <div class="updated" id="updated">—</div>
+</header>
+
+<div id="wlBackdrop" class="wl-backdrop hidden"></div>
+<aside id="wlPane" class="wl-pane">
+  <div class="wl-head">
+    <div class="wl-title">Watchlist</div>
+    <div class="wl-actions">
+      <button id="wlRebuild" title="Rebuild groups">↻</button>
+      <button id="wlClose" title="Close">✕</button>
+    </div>
+  </div>
+  <div class="wl-body" id="wlBody"></div>
+</aside>
+
+<div id="errorBanner" class="banner hidden"></div>
+
+<div id="chainPage">
+<section class="cards" id="cards"></section>
+
+<div class="panel charts-zone">
+  <div class="charts-head">
+    <h2>Charts <span class="hint">OI &amp; Volume in lots · collapsible</span></h2>
+    <button id="chartsToggle" title="Collapse/expand charts">Collapse</button>
+  </div>
+  <div class="charts" id="chartsWrap">
+    <div class="panel"><h2>OI Profile</h2><canvas id="chartOi"></canvas></div>
+    <div class="panel"><h2>OI Change</h2><canvas id="chartOiChg"></canvas></div>
+    <div class="panel"><h2>Volume</h2><canvas id="chartVol"></canvas></div>
+    <div class="panel"><h2>IV Smile</h2><canvas id="chartIv"></canvas></div>
+  </div>
+</div>
+
+<section class="panel">
+  <div class="chain-head">
+    <h2>Option Chain <span class="hint" id="chainHint"></span></h2>
+    <div class="chain-tools">
+      <label class="strike-count">Strikes
+        <select id="chainStrikes" title="Number of strikes visible around ATM">
+          <option value="4">4</option>
+          <option value="6">6</option>
+          <option value="8">8</option>
+          <option value="10">10</option>
+          <option value="12">12</option>
+          <option value="16">16</option>
+          <option value="20" selected>20</option>
+          <option value="30">30</option>
+          <option value="0">All</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table class="chain" id="chainTable"></table>
+  </div>
+</section>
+
+<section class="panel charts-zone">
+  <div class="charts-head">
+    <h2>IVP / IVR History <span class="hint">scroll to zoom · drag to pan · double-click to reset · click legend to show/hide</span></h2>
+    <div class="chain-tools">
+      <label class="strike-count">Range
+        <select id="ivrLookback" title="IVP/IVR lookback window">
+          <option value="1w">1w</option>
+          <option value="1m">1m</option>
+          <option value="3m">3m</option>
+          <option value="6m">6m</option>
+          <option value="1y" selected>1y</option>
+        </select>
+      </label>
+      <button id="ivrReset" title="Reset zoom">Reset zoom</button>
+      <button id="ivrToggle" title="Collapse/expand section">Collapse</button>
+    </div>
+  </div>
+  <div class="charts single" id="ivrWrap">
+    <div class="panel ivr-chart-wrap">
+      <div class="chart-legend" id="ivrLegend"></div>
+      <canvas id="chartIvrIvp"></canvas>
+      <div id="ivrTooltip" class="tooltip hidden"></div>
+    </div>
+  </div>
+</section>
+
+<section class="panel charts-zone">
+  <div class="charts-head">
+    <h2>Volatility Skew <span class="hint">scroll to zoom · drag to pan · double-click to reset · click legend to show/hide</span></h2>
+    <div class="chain-tools">
+      <button id="skewReset" title="Reset zoom">Reset zoom</button>
+      <button id="skewToggle" title="Collapse/expand section">Collapse</button>
+    </div>
+  </div>
+  <div class="charts single" id="skewWrap">
+    <div class="skew-exps" id="skewExps"></div>
+    <div class="panel skew-chart-wrap">
+      <div class="chart-legend" id="skewLegend"></div>
+      <canvas id="chartSkew"></canvas>
+      <div id="skewTooltip" class="tooltip hidden"></div>
+    </div>
+  </div>
+</section>
+
+<section class="panel charts-zone hidden" id="termSection">
+  <div class="charts-head">
+    <h2>IV Term Structure <span class="hint">sphere size &amp; heat by IV · low (blue) → high (red) · scroll to zoom · drag to pan · double-click to reset · click expiries to add/remove</span></h2>
+    <div class="chain-tools">
+      <div class="skew-exps" id="termMode">
+        <button data-mode="call" class="skew-exp active">Call IV</button>
+        <button data-mode="put" class="skew-exp">Put IV</button>
+        <button data-mode="otm" class="skew-exp">OTM IV</button>
+      </div>
+      <label class="term-k" title="Strikes to show either side of the ATM">±<input type="number" id="termK" min="1" max="80" value="8"> strikes</label>
+      <button id="termReset" title="Reset zoom">Reset zoom</button>
+      <button id="termToggle" title="Collapse/expand section">Collapse</button>
+    </div>
+  </div>
+  <div class="charts single" id="termWrap">
+    <div class="term-exps" id="termExps"></div>
+    <div class="panel term-chart-wrap">
+      <div class="chart-legend" id="termLegend"></div>
+      <canvas id="chartTerm"></canvas>
+      <div id="termTooltip" class="tooltip hidden"></div>
+    </div>
+  </div>
+</section>
+</div>
+
+<div id="sectorPage" class="hidden">
+  <div class="sector-summary" id="sectorSummary"></div>
+  <div class="grid-2">
+    <div class="panel">
+      <h2>Sector Performance</h2>
+      <div class="pie-wrap">
+        <canvas id="sectorPie"></canvas>
+        <div class="pie-legend" id="sectorPieLegend"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Sector Constituents <span class="hint">click to expand</span></h2>
+      <div class="sec-wrap" id="sectorComponents"></div>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>Intraday Trend <span class="hint">scroll to zoom · drag to pan · double-click to reset · click legend to show/hide</span></h2>
+    <div class="intraday-controls">
+      <button id="idReset" title="Reset zoom">Reset zoom</button>
+      <label class="toggle"><input type="checkbox" id="idRelative" checked> % change</label>
+    </div>
+    <div class="id-chart-wrap">
+      <div class="id-legend" id="idLegend"></div>
+      <canvas id="sectorLine"></canvas>
+      <div id="idTooltip" class="tooltip hidden"></div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

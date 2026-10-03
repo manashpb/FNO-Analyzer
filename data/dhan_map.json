@@ -1,0 +1,1615 @@
+{
+ "ts": 1790162616,
+ "mapped": [
+  {
+   "aoc": "FINNIFTY",
+   "ticker": "FINNIFTY",
+   "sid": 27,
+   "seg": 0,
+   "disp": "Finnifty"
+  },
+  {
+   "aoc": "NIFTY",
+   "ticker": "NIFTY",
+   "sid": 13,
+   "seg": 0,
+   "disp": "Nifty 50"
+  },
+  {
+   "aoc": "NIFTY_2",
+   "ticker": "NIFTY",
+   "sid": 13,
+   "seg": 0,
+   "disp": "Nifty 50"
+  },
+  {
+   "aoc": "BANKNIFTY",
+   "ticker": "BANKNIFTY",
+   "sid": 25,
+   "seg": 0,
+   "disp": "Nifty Bank"
+  },
+  {
+   "aoc": "MIDCPNIFTY",
+   "ticker": "MIDCPNIFTY",
+   "sid": 442,
+   "seg": 0,
+   "disp": "Nifty Midcap Select"
+  },
+  {
+   "aoc": "SENSEX",
+   "ticker": "SENSEX",
+   "sid": 51,
+   "seg": 0,
+   "disp": "Sensex"
+  },
+  {
+   "aoc": "360ONE",
+   "ticker": "360ONE",
+   "sid": 13061,
+   "seg": 2,
+   "disp": "360 One WAM"
+  },
+  {
+   "aoc": "ABB",
+   "ticker": "ABB",
+   "sid": 13,
+   "seg": 2,
+   "disp": "ABB"
+  },
+  {
+   "aoc": "ADANIENSOL",
+   "ticker": "ADANIENSOL",
+   "sid": 10217,
+   "seg": 2,
+   "disp": "Adani Energy Solutions"
+  },
+  {
+   "aoc": "ADANIENT",
+   "ticker": "ADANIENT",
+   "sid": 25,
+   "seg": 2,
+   "disp": "Adani Enterprises"
+  },
+  {
+   "aoc": "ADANIGREEN",
+   "ticker": "ADANIGREEN",
+   "sid": 3563,
+   "seg": 2,
+   "disp": "Adani Green Energy"
+  },
+  {
+   "aoc": "ADANIPORTS",
+   "ticker": "ADANIPORTS",
+   "sid": 15083,
+   "seg": 2,
+   "disp": "Adani Ports & SEZ"
+  },
+  {
+   "aoc": "ADANIPOWER",
+   "ticker": "ADANIPOWER",
+   "sid": 17388,
+   "seg": 2,
+   "disp": "Adani Power"
+  },
+  {
+   "aoc": "ABCAPITAL",
+   "ticker": "ABCAPITAL",
+   "sid": 21614,
+   "seg": 2,
+   "disp": "Aditya Birla Capital"
+  },
+  {
+   "aoc": "ALKEM",
+   "ticker": "ALKEM",
+   "sid": 11703,
+   "seg": 2,
+   "disp": "Alkem Laboratories"
+  },
+  {
+   "aoc": "AMBER",
+   "ticker": "AMBER",
+   "sid": 1185,
+   "seg": 2,
+   "disp": "Amber Enterprises"
+  },
+  {
+   "aoc": "AMBUJACEM",
+   "ticker": "AMBUJACEM",
+   "sid": 1270,
+   "seg": 2,
+   "disp": "Ambuja Cements"
+  },
+  {
+   "aoc": "ANGELONE",
+   "ticker": "ANGELONE",
+   "sid": 324,
+   "seg": 2,
+   "disp": "Angel One"
+  },
+  {
+   "aoc": "APLAPOLLO",
+   "ticker": "APLAPOLLO",
+   "sid": 25780,
+   "seg": 2,
+   "disp": "APL Apollo Tubes"
+  },
+  {
+   "aoc": "APOLLOHOSP",
+   "ticker": "APOLLOHOSP",
+   "sid": 157,
+   "seg": 2,
+   "disp": "Apollo Hospitals"
+  },
+  {
+   "aoc": "ASHOKLEY",
+   "ticker": "ASHOKLEY",
+   "sid": 212,
+   "seg": 2,
+   "disp": "Ashok Leyland"
+  },
+  {
+   "aoc": "ASIANPAINT",
+   "ticker": "ASIANPAINT",
+   "sid": 236,
+   "seg": 2,
+   "disp": "Asian Paints"
+  },
+  {
+   "aoc": "ASTRAL",
+   "ticker": "ASTRAL",
+   "sid": 14418,
+   "seg": 2,
+   "disp": "Astral"
+  },
+  {
+   "aoc": "ATHERENERG",
+   "ticker": "ATHERENERG",
+   "sid": 757645,
+   "seg": 2,
+   "disp": "Ather Energy"
+  },
+  {
+   "aoc": "AUBANK",
+   "ticker": "AUBANK",
+   "sid": 21238,
+   "seg": 2,
+   "disp": "AU Small Finance Bank"
+  },
+  {
+   "aoc": "AUROPHARMA",
+   "ticker": "AUROPHARMA",
+   "sid": 275,
+   "seg": 2,
+   "disp": "Aurobindo Pharma"
+  },
+  {
+   "aoc": "DMART",
+   "ticker": "DMART",
+   "sid": 19913,
+   "seg": 2,
+   "disp": "Avenue Supermarts DMart"
+  },
+  {
+   "aoc": "AXISBANK",
+   "ticker": "AXISBANK",
+   "sid": 5900,
+   "seg": 2,
+   "disp": "Axis Bank"
+  },
+  {
+   "aoc": "BAJAJ-AUTO",
+   "ticker": "BAJAJ-AUTO",
+   "sid": 16669,
+   "seg": 2,
+   "disp": "Bajaj Auto"
+  },
+  {
+   "aoc": "BAJFINANCE",
+   "ticker": "BAJFINANCE",
+   "sid": 317,
+   "seg": 2,
+   "disp": "Bajaj Finance"
+  },
+  {
+   "aoc": "BAJAJFINSV",
+   "ticker": "BAJAJFINSV",
+   "sid": 16675,
+   "seg": 2,
+   "disp": "Bajaj Finserv"
+  },
+  {
+   "aoc": "BAJAJHLDNG",
+   "ticker": "BAJAJHLDNG",
+   "sid": 305,
+   "seg": 2,
+   "disp": "Bajaj Holdings & Investments"
+  },
+  {
+   "aoc": "BANDHANBNK",
+   "ticker": "BANDHANBNK",
+   "sid": 2263,
+   "seg": 2,
+   "disp": "Bandhan Bank"
+  },
+  {
+   "aoc": "BANKBARODA",
+   "ticker": "BANKBARODA",
+   "sid": 4668,
+   "seg": 2,
+   "disp": "Bank of Baroda"
+  },
+  {
+   "aoc": "BANKINDIA",
+   "ticker": "BANKINDIA",
+   "sid": 4745,
+   "seg": 2,
+   "disp": "Bank of India"
+  },
+  {
+   "aoc": "MAHABANK",
+   "ticker": "MAHABANK",
+   "sid": 11377,
+   "seg": 2,
+   "disp": "Bank of Maharashtra"
+  },
+  {
+   "aoc": "BANKEX",
+   "ticker": "BANKEX",
+   "sid": 69,
+   "seg": 0,
+   "disp": "BSE BANKEX"
+  },
+  {
+   "aoc": "BDL",
+   "ticker": "BDL",
+   "sid": 2144,
+   "seg": 2,
+   "disp": "Bharat Dynamics"
+  },
+  {
+   "aoc": "BEL",
+   "ticker": "BEL",
+   "sid": 383,
+   "seg": 2,
+   "disp": "Bharat Electronics"
+  },
+  {
+   "aoc": "BHARATFORG",
+   "ticker": "BHARATFORG",
+   "sid": 422,
+   "seg": 2,
+   "disp": "Bharat Forge"
+  },
+  {
+   "aoc": "BHEL",
+   "ticker": "BHEL",
+   "sid": 438,
+   "seg": 2,
+   "disp": "Bharat Heavy Electricals"
+  },
+  {
+   "aoc": "BPCL",
+   "ticker": "BPCL",
+   "sid": 526,
+   "seg": 2,
+   "disp": "Bharat Petroleum"
+  },
+  {
+   "aoc": "BHARTIARTL",
+   "ticker": "BHARTIARTL",
+   "sid": 10604,
+   "seg": 2,
+   "disp": "Bharti Airtel"
+  },
+  {
+   "aoc": "BIOCON",
+   "ticker": "BIOCON",
+   "sid": 11373,
+   "seg": 2,
+   "disp": "Biocon"
+  },
+  {
+   "aoc": "BLUESTARCO",
+   "ticker": "BLUESTARCO",
+   "sid": 8311,
+   "seg": 2,
+   "disp": "Blue Star"
+  },
+  {
+   "aoc": "BOSCHLTD",
+   "ticker": "BOSCHLTD",
+   "sid": 2181,
+   "seg": 2,
+   "disp": "Bosch"
+  },
+  {
+   "aoc": "BRITANNIA",
+   "ticker": "BRITANNIA",
+   "sid": 547,
+   "seg": 2,
+   "disp": "Britannia Industries"
+  },
+  {
+   "aoc": "BSE",
+   "ticker": "BSE",
+   "sid": 19585,
+   "seg": 2,
+   "disp": "BSE"
+  },
+  {
+   "aoc": "CANBK",
+   "ticker": "CANBK",
+   "sid": 10794,
+   "seg": 2,
+   "disp": "Canara Bank"
+  },
+  {
+   "aoc": "CDSL",
+   "ticker": "CDSL",
+   "sid": 21174,
+   "seg": 2,
+   "disp": "CDSL"
+  },
+  {
+   "aoc": "CGPOWER",
+   "ticker": "CGPOWER",
+   "sid": 760,
+   "seg": 2,
+   "disp": "CG Power & Industrial Solutions"
+  },
+  {
+   "aoc": "CHOLAFIN",
+   "ticker": "CHOLAFIN",
+   "sid": 685,
+   "seg": 2,
+   "disp": "Cholamandalam Investment"
+  },
+  {
+   "aoc": "CIPLA",
+   "ticker": "CIPLA",
+   "sid": 694,
+   "seg": 2,
+   "disp": "Cipla"
+  },
+  {
+   "aoc": "COALINDIA",
+   "ticker": "COALINDIA",
+   "sid": 20374,
+   "seg": 2,
+   "disp": "Coal India"
+  },
+  {
+   "aoc": "COCHINSHIP",
+   "ticker": "COCHINSHIP",
+   "sid": 21508,
+   "seg": 2,
+   "disp": "Cochin Shipyard"
+  },
+  {
+   "aoc": "COFORGE",
+   "ticker": "COFORGE",
+   "sid": 11543,
+   "seg": 2,
+   "disp": "Coforge"
+  },
+  {
+   "aoc": "COLPAL",
+   "ticker": "COLPAL",
+   "sid": 15141,
+   "seg": 2,
+   "disp": "Colgate Palmolive"
+  },
+  {
+   "aoc": "CAMS",
+   "ticker": "CAMS",
+   "sid": 342,
+   "seg": 2,
+   "disp": "CAMS"
+  },
+  {
+   "aoc": "CONCOR",
+   "ticker": "CONCOR",
+   "sid": 4749,
+   "seg": 2,
+   "disp": "Container Corporation of India"
+  },
+  {
+   "aoc": "CROMPTON",
+   "ticker": "CROMPTON",
+   "sid": 17094,
+   "seg": 2,
+   "disp": "Crompton Greaves"
+  },
+  {
+   "aoc": "CUMMINSIND",
+   "ticker": "CUMMINSIND",
+   "sid": 1901,
+   "seg": 2,
+   "disp": "Cummins"
+  },
+  {
+   "aoc": "DABUR",
+   "ticker": "DABUR",
+   "sid": 772,
+   "seg": 2,
+   "disp": "Dabur India"
+  },
+  {
+   "aoc": "DALBHARAT",
+   "ticker": "DALBHARAT",
+   "sid": 8075,
+   "seg": 2,
+   "disp": "Dalmia Bharat"
+  },
+  {
+   "aoc": "DELHIVERY",
+   "ticker": "DELHIVERY",
+   "sid": 9599,
+   "seg": 2,
+   "disp": "Delhivery"
+  },
+  {
+   "aoc": "DIVISLAB",
+   "ticker": "DIVISLAB",
+   "sid": 10940,
+   "seg": 2,
+   "disp": "Divis Laboratories"
+  },
+  {
+   "aoc": "DIXON",
+   "ticker": "DIXON",
+   "sid": 21690,
+   "seg": 2,
+   "disp": "Dixon Technologies"
+  },
+  {
+   "aoc": "DLF",
+   "ticker": "DLF",
+   "sid": 14732,
+   "seg": 2,
+   "disp": "DLF"
+  },
+  {
+   "aoc": "DRREDDY",
+   "ticker": "DRREDDY",
+   "sid": 881,
+   "seg": 2,
+   "disp": "Dr Reddys Laboratories"
+  },
+  {
+   "aoc": "EICHERMOT",
+   "ticker": "EICHERMOT",
+   "sid": 910,
+   "seg": 2,
+   "disp": "Eicher Motors"
+  },
+  {
+   "aoc": "EXIDEIND",
+   "ticker": "EXIDEIND",
+   "sid": 676,
+   "seg": 2,
+   "disp": "Exide Industries"
+  },
+  {
+   "aoc": "FEDERALBNK",
+   "ticker": "FEDERALBNK",
+   "sid": 1023,
+   "seg": 2,
+   "disp": "Federal Bank"
+  },
+  {
+   "aoc": "FORCEMOT",
+   "ticker": "FORCEMOT",
+   "sid": 11573,
+   "seg": 2,
+   "disp": "Force Motors"
+  },
+  {
+   "aoc": "FORTIS",
+   "ticker": "FORTIS",
+   "sid": 14592,
+   "seg": 2,
+   "disp": "Fortis Healthcare"
+  },
+  {
+   "aoc": "GAIL",
+   "ticker": "GAIL",
+   "sid": 4717,
+   "seg": 2,
+   "disp": "GAIL"
+  },
+  {
+   "aoc": "GVT&D",
+   "ticker": "GVT&D",
+   "sid": 16783,
+   "seg": 2,
+   "disp": "GE Vernova T&D"
+  },
+  {
+   "aoc": "GLENMARK",
+   "ticker": "GLENMARK",
+   "sid": 7406,
+   "seg": 2,
+   "disp": "Glenmark Pharmaceuticals"
+  },
+  {
+   "aoc": "GMRAIRPORT",
+   "ticker": "GMRAIRPORT",
+   "sid": 13528,
+   "seg": 2,
+   "disp": "GMR Airports"
+  },
+  {
+   "aoc": "GODFRYPHLP",
+   "ticker": "GODFRYPHLP",
+   "sid": 1181,
+   "seg": 2,
+   "disp": "Godfrey Phillips"
+  },
+  {
+   "aoc": "GODREJCP",
+   "ticker": "GODREJCP",
+   "sid": 10099,
+   "seg": 2,
+   "disp": "Godrej Consumer Products"
+  },
+  {
+   "aoc": "GODREJPROP",
+   "ticker": "GODREJPROP",
+   "sid": 17875,
+   "seg": 2,
+   "disp": "Godrej Properties"
+  },
+  {
+   "aoc": "GRASIM",
+   "ticker": "GRASIM",
+   "sid": 1232,
+   "seg": 2,
+   "disp": "Grasim Industries"
+  },
+  {
+   "aoc": "HAVELLS",
+   "ticker": "HAVELLS",
+   "sid": 9819,
+   "seg": 2,
+   "disp": "Havells"
+  },
+  {
+   "aoc": "HCLTECH",
+   "ticker": "HCLTECH",
+   "sid": 7229,
+   "seg": 2,
+   "disp": "HCL Technologies"
+  },
+  {
+   "aoc": "HDFCAMC",
+   "ticker": "HDFCAMC",
+   "sid": 4244,
+   "seg": 2,
+   "disp": "HDFC AMC"
+  },
+  {
+   "aoc": "HDFCBANK",
+   "ticker": "HDFCBANK",
+   "sid": 1333,
+   "seg": 2,
+   "disp": "HDFC Bank"
+  },
+  {
+   "aoc": "HDFCLIFE",
+   "ticker": "HDFCLIFE",
+   "sid": 467,
+   "seg": 2,
+   "disp": "HDFC Life Insurance"
+  },
+  {
+   "aoc": "HEROMOTOCO",
+   "ticker": "HEROMOTOCO",
+   "sid": 1348,
+   "seg": 2,
+   "disp": "Hero Motocorp"
+  },
+  {
+   "aoc": "HINDALCO",
+   "ticker": "HINDALCO",
+   "sid": 1363,
+   "seg": 2,
+   "disp": "Hindalco Industries"
+  },
+  {
+   "aoc": "HAL",
+   "ticker": "HAL",
+   "sid": 2303,
+   "seg": 2,
+   "disp": "Hindustan Aeronautics"
+  },
+  {
+   "aoc": "HINDPETRO",
+   "ticker": "HINDPETRO",
+   "sid": 1406,
+   "seg": 2,
+   "disp": "Hindustan Petroleum"
+  },
+  {
+   "aoc": "HINDUNILVR",
+   "ticker": "HINDUNILVR",
+   "sid": 1394,
+   "seg": 2,
+   "disp": "Hindustan Unilever"
+  },
+  {
+   "aoc": "HINDZINC",
+   "ticker": "HINDZINC",
+   "sid": 1424,
+   "seg": 2,
+   "disp": "Hindustan Zinc"
+  },
+  {
+   "aoc": "POWERINDIA",
+   "ticker": "POWERINDIA",
+   "sid": 18457,
+   "seg": 2,
+   "disp": "Hitachi Energy"
+  },
+  {
+   "aoc": "HUDCO",
+   "ticker": "HUDCO",
+   "sid": 20825,
+   "seg": 2,
+   "disp": "HUDCO"
+  },
+  {
+   "aoc": "HYUNDAI",
+   "ticker": "HYUNDAI",
+   "sid": 25844,
+   "seg": 2,
+   "disp": "Hyundai Motor India"
+  },
+  {
+   "aoc": "ICICIBANK",
+   "ticker": "ICICIBANK",
+   "sid": 4963,
+   "seg": 2,
+   "disp": "ICICI Bank"
+  },
+  {
+   "aoc": "ICICIGI",
+   "ticker": "ICICIGI",
+   "sid": 21770,
+   "seg": 2,
+   "disp": "ICICI Lombard General Insurance"
+  },
+  {
+   "aoc": "ICICIPRULI",
+   "ticker": "ICICIPRULI",
+   "sid": 18652,
+   "seg": 2,
+   "disp": "ICICI Prudential Life Insurance"
+  },
+  {
+   "aoc": "IDFCFIRSTB",
+   "ticker": "IDFCFIRSTB",
+   "sid": 11184,
+   "seg": 2,
+   "disp": "IDFC First Bank"
+  },
+  {
+   "aoc": "INDIANB",
+   "ticker": "INDIANB",
+   "sid": 14309,
+   "seg": 2,
+   "disp": "Indian Bank"
+  },
+  {
+   "aoc": "IEX",
+   "ticker": "IEX",
+   "sid": 220,
+   "seg": 2,
+   "disp": "Indian Energy Exchange"
+  },
+  {
+   "aoc": "INDHOTEL",
+   "ticker": "INDHOTEL",
+   "sid": 1512,
+   "seg": 2,
+   "disp": "Indian Hotels Company"
+  },
+  {
+   "aoc": "IOC",
+   "ticker": "IOC",
+   "sid": 1624,
+   "seg": 2,
+   "disp": "Indian Oil Corporation"
+  },
+  {
+   "aoc": "INDUSTOWER",
+   "ticker": "INDUSTOWER",
+   "sid": 29135,
+   "seg": 2,
+   "disp": "Indus Towers"
+  },
+  {
+   "aoc": "INDUSINDBK",
+   "ticker": "INDUSINDBK",
+   "sid": 5258,
+   "seg": 2,
+   "disp": "Indusind Bank"
+  },
+  {
+   "aoc": "NAUKRI",
+   "ticker": "NAUKRI",
+   "sid": 13751,
+   "seg": 2,
+   "disp": "Info Edge"
+  },
+  {
+   "aoc": "INFY",
+   "ticker": "INFY",
+   "sid": 1594,
+   "seg": 2,
+   "disp": "Infosys"
+  },
+  {
+   "aoc": "INOXWIND",
+   "ticker": "INOXWIND",
+   "sid": 7852,
+   "seg": 2,
+   "disp": "Inox Wind"
+  },
+  {
+   "aoc": "INDIGO",
+   "ticker": "INDIGO",
+   "sid": 11195,
+   "seg": 2,
+   "disp": "Interglobe Aviation"
+  },
+  {
+   "aoc": "IREDA",
+   "ticker": "IREDA",
+   "sid": 20261,
+   "seg": 2,
+   "disp": "IREDA"
+  },
+  {
+   "aoc": "IRFC",
+   "ticker": "IRFC",
+   "sid": 2029,
+   "seg": 2,
+   "disp": "IRFC"
+  },
+  {
+   "aoc": "ITC",
+   "ticker": "ITC",
+   "sid": 1660,
+   "seg": 2,
+   "disp": "ITC"
+  },
+  {
+   "aoc": "JINDALSTEL",
+   "ticker": "JINDALSTEL",
+   "sid": 6733,
+   "seg": 2,
+   "disp": "Jindal Steel"
+  },
+  {
+   "aoc": "JIOFIN",
+   "ticker": "JIOFIN",
+   "sid": 18143,
+   "seg": 2,
+   "disp": "Jio Financial Services"
+  },
+  {
+   "aoc": "JSWENERGY",
+   "ticker": "JSWENERGY",
+   "sid": 17869,
+   "seg": 2,
+   "disp": "JSW Energy"
+  },
+  {
+   "aoc": "JSWSTEEL",
+   "ticker": "JSWSTEEL",
+   "sid": 11723,
+   "seg": 2,
+   "disp": "JSW Steel"
+  },
+  {
+   "aoc": "JUBLFOOD",
+   "ticker": "JUBLFOOD",
+   "sid": 18096,
+   "seg": 2,
+   "disp": "Jubilant FoodWorks"
+  },
+  {
+   "aoc": "KALYANKJIL",
+   "ticker": "KALYANKJIL",
+   "sid": 2955,
+   "seg": 2,
+   "disp": "Kalyan Jewellers"
+  },
+  {
+   "aoc": "KAYNES",
+   "ticker": "KAYNES",
+   "sid": 12092,
+   "seg": 2,
+   "disp": "Kaynes Technology India"
+  },
+  {
+   "aoc": "KEI",
+   "ticker": "KEI",
+   "sid": 13310,
+   "seg": 2,
+   "disp": "KEI Industries"
+  },
+  {
+   "aoc": "KFINTECH",
+   "ticker": "KFINTECH",
+   "sid": 13359,
+   "seg": 2,
+   "disp": "KFin Technologies"
+  },
+  {
+   "aoc": "KOTAKBANK",
+   "ticker": "KOTAKBANK",
+   "sid": 1922,
+   "seg": 2,
+   "disp": "Kotak Bank"
+  },
+  {
+   "aoc": "KPITTECH",
+   "ticker": "KPITTECH",
+   "sid": 9683,
+   "seg": 2,
+   "disp": "KPIT Technologies"
+  },
+  {
+   "aoc": "LT",
+   "ticker": "LT",
+   "sid": 11483,
+   "seg": 2,
+   "disp": "Larsen & Toubro"
+  },
+  {
+   "aoc": "LAURUSLABS",
+   "ticker": "LAURUSLABS",
+   "sid": 19234,
+   "seg": 2,
+   "disp": "Laurus Labs"
+  },
+  {
+   "aoc": "LICHSGFIN",
+   "ticker": "LICHSGFIN",
+   "sid": 1997,
+   "seg": 2,
+   "disp": "LIC Housing Finance"
+  },
+  {
+   "aoc": "LICI",
+   "ticker": "LICI",
+   "sid": 9480,
+   "seg": 2,
+   "disp": "LIC of India"
+  },
+  {
+   "aoc": "LTF",
+   "ticker": "LTF",
+   "sid": 24948,
+   "seg": 2,
+   "disp": "L&T Finance"
+  },
+  {
+   "aoc": "LTM",
+   "ticker": "LTM",
+   "sid": 17818,
+   "seg": 2,
+   "disp": "LTM"
+  },
+  {
+   "aoc": "LUPIN",
+   "ticker": "LUPIN",
+   "sid": 10440,
+   "seg": 2,
+   "disp": "Lupin"
+  },
+  {
+   "aoc": "LODHA",
+   "ticker": "LODHA",
+   "sid": 3220,
+   "seg": 2,
+   "disp": "Lodha Developers"
+  },
+  {
+   "aoc": "M&M",
+   "ticker": "M&M",
+   "sid": 2031,
+   "seg": 2,
+   "disp": "Mahindra & Mahindra"
+  },
+  {
+   "aoc": "MANAPPURAM",
+   "ticker": "MANAPPURAM",
+   "sid": 19061,
+   "seg": 2,
+   "disp": "Manappuram Finance"
+  },
+  {
+   "aoc": "MANKIND",
+   "ticker": "MANKIND",
+   "sid": 15380,
+   "seg": 2,
+   "disp": "Mankind Pharma"
+  },
+  {
+   "aoc": "MARICO",
+   "ticker": "MARICO",
+   "sid": 4067,
+   "seg": 2,
+   "disp": "Marico"
+  },
+  {
+   "aoc": "MARUTI",
+   "ticker": "MARUTI",
+   "sid": 10999,
+   "seg": 2,
+   "disp": "Maruti Suzuki"
+  },
+  {
+   "aoc": "MFSL",
+   "ticker": "MFSL",
+   "sid": 2142,
+   "seg": 2,
+   "disp": "Max Financial Services"
+  },
+  {
+   "aoc": "MAXHEALTH",
+   "ticker": "MAXHEALTH",
+   "sid": 22377,
+   "seg": 2,
+   "disp": "Max Healthcare Institute"
+  },
+  {
+   "aoc": "MAZDOCK",
+   "ticker": "MAZDOCK",
+   "sid": 509,
+   "seg": 2,
+   "disp": "Mazagon Dock Shipbuilders"
+  },
+  {
+   "aoc": "MCX",
+   "ticker": "MCX",
+   "sid": 31181,
+   "seg": 2,
+   "disp": "MCX"
+  },
+  {
+   "aoc": "MOTILALOFS",
+   "ticker": "MOTILALOFS",
+   "sid": 14947,
+   "seg": 2,
+   "disp": "Motilal Oswal Financial Services"
+  },
+  {
+   "aoc": "MPHASIS",
+   "ticker": "MPHASIS",
+   "sid": 4503,
+   "seg": 2,
+   "disp": "Mphasis"
+  },
+  {
+   "aoc": "MUTHOOTFIN",
+   "ticker": "MUTHOOTFIN",
+   "sid": 23650,
+   "seg": 2,
+   "disp": "Muthoot Finance"
+  },
+  {
+   "aoc": "NATIONALUM",
+   "ticker": "NATIONALUM",
+   "sid": 6364,
+   "seg": 2,
+   "disp": "NALCO"
+  },
+  {
+   "aoc": "NBCC",
+   "ticker": "NBCC",
+   "sid": 31415,
+   "seg": 2,
+   "disp": "NBCC"
+  },
+  {
+   "aoc": "NESTLEIND",
+   "ticker": "NESTLEIND",
+   "sid": 17963,
+   "seg": 2,
+   "disp": "Nestle"
+  },
+  {
+   "aoc": "NHPC",
+   "ticker": "NHPC",
+   "sid": 17400,
+   "seg": 2,
+   "disp": "NHPC"
+  },
+  {
+   "aoc": "NAM-INDIA",
+   "ticker": "NAM-INDIA",
+   "sid": 357,
+   "seg": 2,
+   "disp": "Nippon Life India AMC"
+  },
+  {
+   "aoc": "NMDC",
+   "ticker": "NMDC",
+   "sid": 15332,
+   "seg": 2,
+   "disp": "NMDC"
+  },
+  {
+   "aoc": "NTPC",
+   "ticker": "NTPC",
+   "sid": 11630,
+   "seg": 2,
+   "disp": "NTPC"
+  },
+  {
+   "aoc": "NUVAMA",
+   "ticker": "NUVAMA",
+   "sid": 18721,
+   "seg": 2,
+   "disp": "Nuvama Wealth Management"
+  },
+  {
+   "aoc": "NYKAA",
+   "ticker": "NYKAA",
+   "sid": 6545,
+   "seg": 2,
+   "disp": "Nykaa"
+  },
+  {
+   "aoc": "OBEROIRLTY",
+   "ticker": "OBEROIRLTY",
+   "sid": 20242,
+   "seg": 2,
+   "disp": "Oberoi Realty"
+  },
+  {
+   "aoc": "ONGC",
+   "ticker": "ONGC",
+   "sid": 2475,
+   "seg": 2,
+   "disp": "Oil & Natural Gas Corporation"
+  },
+  {
+   "aoc": "OIL",
+   "ticker": "OIL",
+   "sid": 17438,
+   "seg": 2,
+   "disp": "Oil India"
+  },
+  {
+   "aoc": "PAYTM",
+   "ticker": "PAYTM",
+   "sid": 6705,
+   "seg": 2,
+   "disp": "One 97 Communications"
+  },
+  {
+   "aoc": "OFSS",
+   "ticker": "OFSS",
+   "sid": 10738,
+   "seg": 2,
+   "disp": "Oracle Financial Services Software"
+  },
+  {
+   "aoc": "PAGEIND",
+   "ticker": "PAGEIND",
+   "sid": 14413,
+   "seg": 2,
+   "disp": "Page Industries"
+  },
+  {
+   "aoc": "PATANJALI",
+   "ticker": "PATANJALI",
+   "sid": 17029,
+   "seg": 2,
+   "disp": "Patanjali Foods"
+  },
+  {
+   "aoc": "POLICYBZR",
+   "ticker": "POLICYBZR",
+   "sid": 6656,
+   "seg": 2,
+   "disp": "PB FinTech"
+  },
+  {
+   "aoc": "PERSISTENT",
+   "ticker": "PERSISTENT",
+   "sid": 18365,
+   "seg": 2,
+   "disp": "Persistent Systems"
+  },
+  {
+   "aoc": "PETRONET",
+   "ticker": "PETRONET",
+   "sid": 11351,
+   "seg": 2,
+   "disp": "Petronet LNG"
+  },
+  {
+   "aoc": "PGEL",
+   "ticker": "PGEL",
+   "sid": 25358,
+   "seg": 2,
+   "disp": "PG Electroplast"
+  },
+  {
+   "aoc": "PHOENIXLTD",
+   "ticker": "PHOENIXLTD",
+   "sid": 14552,
+   "seg": 2,
+   "disp": "Phoenix Mills"
+  },
+  {
+   "aoc": "PIIND",
+   "ticker": "PIIND",
+   "sid": 24184,
+   "seg": 2,
+   "disp": "PI Industries"
+  },
+  {
+   "aoc": "PIDILITIND",
+   "ticker": "PIDILITIND",
+   "sid": 2664,
+   "seg": 2,
+   "disp": "Pidilite Industries"
+  },
+  {
+   "aoc": "PNBHOUSING",
+   "ticker": "PNBHOUSING",
+   "sid": 18908,
+   "seg": 2,
+   "disp": "PNB Housing Finance"
+  },
+  {
+   "aoc": "POLYCAB",
+   "ticker": "POLYCAB",
+   "sid": 9590,
+   "seg": 2,
+   "disp": "Polycab"
+  },
+  {
+   "aoc": "PFC",
+   "ticker": "PFC",
+   "sid": 14299,
+   "seg": 2,
+   "disp": "Power Finance Corporation"
+  },
+  {
+   "aoc": "POWERGRID",
+   "ticker": "POWERGRID",
+   "sid": 14977,
+   "seg": 2,
+   "disp": "Power Grid Corporation of India"
+  },
+  {
+   "aoc": "PREMIERENE",
+   "ticker": "PREMIERENE",
+   "sid": 25049,
+   "seg": 2,
+   "disp": "Premier Energies"
+  },
+  {
+   "aoc": "PRESTIGE",
+   "ticker": "PRESTIGE",
+   "sid": 20302,
+   "seg": 2,
+   "disp": "Prestige Estates Projects"
+  },
+  {
+   "aoc": "PNB",
+   "ticker": "PNB",
+   "sid": 10666,
+   "seg": 2,
+   "disp": "Punjab National Bank"
+  },
+  {
+   "aoc": "RADICO",
+   "ticker": "RADICO",
+   "sid": 10990,
+   "seg": 2,
+   "disp": "Radico Khaitan"
+  },
+  {
+   "aoc": "RVNL",
+   "ticker": "RVNL",
+   "sid": 9552,
+   "seg": 2,
+   "disp": "Rail Vikas Nigam"
+  },
+  {
+   "aoc": "RBLBANK",
+   "ticker": "RBLBANK",
+   "sid": 18391,
+   "seg": 2,
+   "disp": "RBL Bank"
+  },
+  {
+   "aoc": "RELIANCE",
+   "ticker": "RELIANCE",
+   "sid": 2885,
+   "seg": 2,
+   "disp": "Reliance Industries"
+  },
+  {
+   "aoc": "RECLTD",
+   "ticker": "RECLTD",
+   "sid": 15355,
+   "seg": 2,
+   "disp": "REC"
+  },
+  {
+   "aoc": "SAGILITY",
+   "ticker": "SAGILITY",
+   "sid": 27052,
+   "seg": 2,
+   "disp": "Sagility"
+  },
+  {
+   "aoc": "SAMMAANCAP",
+   "ticker": "SAMMAANCAP",
+   "sid": 30125,
+   "seg": 2,
+   "disp": "Sammaan Capital"
+  },
+  {
+   "aoc": "MOTHERSON",
+   "ticker": "MOTHERSON",
+   "sid": 4204,
+   "seg": 2,
+   "disp": "Samvardhana Motherson International"
+  },
+  {
+   "aoc": "SBICARD",
+   "ticker": "SBICARD",
+   "sid": 17971,
+   "seg": 2,
+   "disp": "SBI Cards"
+  },
+  {
+   "aoc": "SBILIFE",
+   "ticker": "SBILIFE",
+   "sid": 21808,
+   "seg": 2,
+   "disp": "SBI Life Insurance"
+  },
+  {
+   "aoc": "SHREECEM",
+   "ticker": "SHREECEM",
+   "sid": 3103,
+   "seg": 2,
+   "disp": "Shree Cement"
+  },
+  {
+   "aoc": "SHRIRAMFIN",
+   "ticker": "SHRIRAMFIN",
+   "sid": 4306,
+   "seg": 2,
+   "disp": "Shriram Finance"
+  },
+  {
+   "aoc": "SIEMENS",
+   "ticker": "SIEMENS",
+   "sid": 3150,
+   "seg": 2,
+   "disp": "Siemens"
+  },
+  {
+   "aoc": "SOLARINDS",
+   "ticker": "SOLARINDS",
+   "sid": 13332,
+   "seg": 2,
+   "disp": "Solar Industries"
+  },
+  {
+   "aoc": "SONACOMS",
+   "ticker": "SONACOMS",
+   "sid": 4684,
+   "seg": 2,
+   "disp": "Sona BLW Precision Forgings"
+  },
+  {
+   "aoc": "SRF",
+   "ticker": "SRF",
+   "sid": 3273,
+   "seg": 2,
+   "disp": "SRF"
+  },
+  {
+   "aoc": "SBIN",
+   "ticker": "SBIN",
+   "sid": 3045,
+   "seg": 2,
+   "disp": "State Bank of India"
+  },
+  {
+   "aoc": "SAIL",
+   "ticker": "SAIL",
+   "sid": 2963,
+   "seg": 2,
+   "disp": "Steel Authority of India"
+  },
+  {
+   "aoc": "SUNPHARMA",
+   "ticker": "SUNPHARMA",
+   "sid": 3351,
+   "seg": 2,
+   "disp": "Sun Pharmaceutical"
+  },
+  {
+   "aoc": "SUPREMEIND",
+   "ticker": "SUPREMEIND",
+   "sid": 3363,
+   "seg": 2,
+   "disp": "Supreme Industries"
+  },
+  {
+   "aoc": "SUZLON",
+   "ticker": "SUZLON",
+   "sid": 12018,
+   "seg": 2,
+   "disp": "Suzlon Energy"
+  },
+  {
+   "aoc": "SWIGGY",
+   "ticker": "SWIGGY",
+   "sid": 27066,
+   "seg": 2,
+   "disp": "Swiggy"
+  },
+  {
+   "aoc": "TCS",
+   "ticker": "TCS",
+   "sid": 11536,
+   "seg": 2,
+   "disp": "Tata Consultancy Services"
+  },
+  {
+   "aoc": "TATACONSUM",
+   "ticker": "TATACONSUM",
+   "sid": 3432,
+   "seg": 2,
+   "disp": "Tata Consumer Products"
+  },
+  {
+   "aoc": "TATAELXSI",
+   "ticker": "TATAELXSI",
+   "sid": 3411,
+   "seg": 2,
+   "disp": "Tata Elxsi"
+  },
+  {
+   "aoc": "TMPV",
+   "ticker": "TMPV",
+   "sid": 3456,
+   "seg": 2,
+   "disp": "Tata Motors Passenger Vehicles"
+  },
+  {
+   "aoc": "TATAPOWER",
+   "ticker": "TATAPOWER",
+   "sid": 3426,
+   "seg": 2,
+   "disp": "Tata Power"
+  },
+  {
+   "aoc": "TATASTEEL",
+   "ticker": "TATASTEEL",
+   "sid": 3499,
+   "seg": 2,
+   "disp": "Tata Steel"
+  },
+  {
+   "aoc": "TATATECH",
+   "ticker": "TATATECH",
+   "sid": 20293,
+   "seg": 2,
+   "disp": "Tata Technologies"
+  },
+  {
+   "aoc": "TECHM",
+   "ticker": "TECHM",
+   "sid": 13538,
+   "seg": 2,
+   "disp": "Tech Mahindra"
+  },
+  {
+   "aoc": "TITAN",
+   "ticker": "TITAN",
+   "sid": 3506,
+   "seg": 2,
+   "disp": "Titan"
+  },
+  {
+   "aoc": "TORNTPHARM",
+   "ticker": "TORNTPHARM",
+   "sid": 3518,
+   "seg": 2,
+   "disp": "Torrent Pharmaceuticals"
+  },
+  {
+   "aoc": "TORNTPOWER",
+   "ticker": "TORNTPOWER",
+   "sid": 13786,
+   "seg": 2,
+   "disp": "Torrent Power"
+  },
+  {
+   "aoc": "TRENT",
+   "ticker": "TRENT",
+   "sid": 1964,
+   "seg": 2,
+   "disp": "Trent"
+  },
+  {
+   "aoc": "TIINDIA",
+   "ticker": "TIINDIA",
+   "sid": 312,
+   "seg": 2,
+   "disp": "Tube Investment"
+  },
+  {
+   "aoc": "TVSMOTOR",
+   "ticker": "TVSMOTOR",
+   "sid": 8479,
+   "seg": 2,
+   "disp": "TVS Motors"
+  },
+  {
+   "aoc": "ULTRACEMCO",
+   "ticker": "ULTRACEMCO",
+   "sid": 11532,
+   "seg": 2,
+   "disp": "UltraTech Cement"
+  },
+  {
+   "aoc": "UNIONBANK",
+   "ticker": "UNIONBANK",
+   "sid": 10753,
+   "seg": 2,
+   "disp": "Union Bank of India"
+  },
+  {
+   "aoc": "UPL",
+   "ticker": "UPL",
+   "sid": 11287,
+   "seg": 2,
+   "disp": "UPL"
+  },
+  {
+   "aoc": "UNITDSPR",
+   "ticker": "UNITDSPR",
+   "sid": 10447,
+   "seg": 2,
+   "disp": "United Spirits"
+  },
+  {
+   "aoc": "UNOMINDA",
+   "ticker": "UNOMINDA",
+   "sid": 14154,
+   "seg": 2,
+   "disp": "UNO Minda"
+  },
+  {
+   "aoc": "VBL",
+   "ticker": "VBL",
+   "sid": 18921,
+   "seg": 2,
+   "disp": "Varun Beverages"
+  },
+  {
+   "aoc": "VEDL",
+   "ticker": "VEDL",
+   "sid": 3063,
+   "seg": 2,
+   "disp": "Vedanta"
+  },
+  {
+   "aoc": "VMM",
+   "ticker": "VMM",
+   "sid": 27969,
+   "seg": 2,
+   "disp": "Vishal Mega Mart"
+  },
+  {
+   "aoc": "IDEA",
+   "ticker": "IDEA",
+   "sid": 14366,
+   "seg": 2,
+   "disp": "Vodafone Idea"
+  },
+  {
+   "aoc": "VOLTAS",
+   "ticker": "VOLTAS",
+   "sid": 3718,
+   "seg": 2,
+   "disp": "Voltas"
+  },
+  {
+   "aoc": "WAAREEENER",
+   "ticker": "WAAREEENER",
+   "sid": 25907,
+   "seg": 2,
+   "disp": "Waaree Energies"
+  },
+  {
+   "aoc": "WIPRO",
+   "ticker": "WIPRO",
+   "sid": 3787,
+   "seg": 2,
+   "disp": "Wipro"
+  },
+  {
+   "aoc": "YESBANK",
+   "ticker": "YESBANK",
+   "sid": 11915,
+   "seg": 2,
+   "disp": "Yes Bank"
+  },
+  {
+   "aoc": "ETERNAL",
+   "ticker": "ETERNAL",
+   "sid": 5097,
+   "seg": 2,
+   "disp": "Eternal"
+  },
+  {
+   "aoc": "ZYDUSLIFE",
+   "ticker": "ZYDUSLIFE",
+   "sid": 7929,
+   "seg": 2,
+   "disp": "Zydus Life Science"
+  }
+ ],
+ "unmapped": [
+  {
+   "aoc": "CRUDEOIL",
+   "reason": "unsupported segment 'M'"
+  },
+  {
+   "aoc": "NATURALGAS",
+   "reason": "unsupported segment 'M'"
+  },
+  {
+   "aoc": "BTC",
+   "reason": "no exact Dhan match"
+  },
+  {
+   "aoc": "BTC1",
+   "reason": "no exact Dhan match"
+  },
+  {
+   "aoc": "COPPER",
+   "reason": "unsupported segment 'M'"
+  },
+  {
+   "aoc": "ETH",
+   "reason": "no exact Dhan match"
+  },
+  {
+   "aoc": "ETH1",
+   "reason": "no exact Dhan match"
+  },
+  {
+   "aoc": "GOLD",
+   "reason": "unsupported segment 'M'"
+  },
+  {
+   "aoc": "SILVER",
+   "reason": "unsupported segment 'M'"
+  },
+  {
+   "aoc": "SILVERM",
+   "reason": "unsupported segment 'M'"
+  }
+ ]
+}

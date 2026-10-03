@@ -1,0 +1,25 @@
+[Unit]
+Description=FNO Analyzer V2
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=fno
+Group=fno
+WorkingDirectory=/opt/fno-analyzer
+EnvironmentFile=-/etc/fno-analyzer/fno-analyzer.env
+Environment=PYTHONPATH=/opt/fno-analyzer/src
+Environment=FNO_CONFIG=/opt/fno-analyzer/config.json
+ExecStart=/opt/fno-analyzer/.venv/bin/python -m fno_analyzer
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/fno-analyzer
+LimitNOFILE=4096
+
+[Install]
+WantedBy=multi-user.target

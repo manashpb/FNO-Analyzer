@@ -9,8 +9,9 @@
   },
   "providers": {
     "aoc": {
+      "api_mode": "v27",
       "base_url": "https://apim4.niftychain.in/api/v10",
-      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Im1hbmFzaC5wYm9ydGhha3VyQGdtYWlsLmNvbSIsInN1YiI6IjY0ZmU4Yjg4MTNlYmVkOTA1YzU5NTYyZiIsImlzUHJvIjp0cnVlLCJwbGFuRXhwaXJ5IjoyNTI3MjczNDM3MDAwLCJzYkV4cGlyeSI6MCwiZGV2aWNlIjoid2ViIiwidHYiOjI4LCJpYXQiOjE3OTAzMDk3MjAsImV4cCI6MTc5MDkxNDUyMH0.FbTDBLwy0B29kX9GpRRPPV4ZscVg04jzo05ryL6Zbsc",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkZXZpY2UiOiJ3ZWIiLCJlbWFpbCI6Im1hbmFzaC5wYm9ydGhha3VyQGdtYWlsLmNvbSIsImV4cCI6MTc5MjQ2NzkxMywiaWF0IjoxNzkxODYzMTEzLCJpc1BybyI6dHJ1ZSwicGxhbkV4cGlyeSI6MjUyNzI3MzQzNzAwMCwic2JFeHBpcnkiOjAsInN1YiI6IjY0ZmU4Yjg4MTNlYmVkOTA1YzU5NTYyZiIsInR2Ijo1M30.NaMIU9sKfFK8-73q4L7ohKBvrEJutvsHBJ8USarT8Go",
       "token_env": "FNO_AOC_TOKEN"
     },
     "dhan": {
@@ -19,7 +20,7 @@
       "expiry_list_url": "https://static-scanx.dhan.co/staticscanx/explist",
       "option_chain_url": "https://scanx.dhan.co/scanx/optchain",
       "ivpivr_url": "https://chart-analytics-api.dhan.co/chart-analytics-api/ivp_ivr",
-      "jwt": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJpc3MiOiJkaGFuIiwiZXhwIjoxNzkwMzY3NDA0LCJjbGllbnRfaWQiOiIxMTAwMTU2NTM5In0.2lgPGXyMWoxVAq-mYfz70v1BTcvY-hAyY-hfqkXIWWk8Vree56t3Fsneule-MZL0KEwhkH08wE0SVdAxQ6dTcw",
+      "jwt": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJpc3MiOiJkaGFuIiwiZXhwIjoxNzkxOTE0MjQ4LCJjbGllbnRfaWQiOiIxMTAwMTU2NTM5In0.B1c6pZ-bX4y9RxA3-jVakYwYUUUPpFS5FZGCODk9Frc5ibrSHHjZhVXNx7WqSbgEB9BnrY438fBCVXsu1QELww",
       "jwt_env": "FNO_DHAN_JWT",
       "entity_id": "9864455839",
       "entity_id_env": "FNO_DHAN_ENTITY_ID",

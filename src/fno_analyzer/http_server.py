@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -79,6 +80,10 @@ class ApplicationHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/") or "/"
+        if path in ("/api/scanners/iv/start", "/api/scanners/iv/cancel",
+                    "/api/history/oi/start", "/api/history/oi/cancel", "/api/scanners/oi-zscore/update", "/api/scanners/oi-levels/run"):
+            self._send_json({"error": "Use POST for actions"}, 405)
+            return
         if path in ("/", "/index.html"):
             self._send_file("index.html")
             return
@@ -97,10 +102,29 @@ class ApplicationHandler(BaseHTTPRequestHandler):
             LOG.exception("Unhandled request error for %s", path)
             self._send_json({"error": "internal server error", "code": "INTERNAL_ERROR", "retryable": False}, 500)
 
+    def do_POST(self) -> None:
+        parsed = urlparse(self.path)
+        path = parsed.path.rstrip("/")
+        if path not in ("/api/scanners/iv/start", "/api/scanners/iv/cancel",
+                        "/api/history/oi/start", "/api/history/oi/cancel", "/api/scanners/oi-zscore/update", "/api/scanners/oi-levels/run"):
+            self._send_json({"error": "not found"}, 404)
+            return
+        try:
+            result, status = self.server.application.dispatch(path, parse_qs(parsed.query, keep_blank_values=True))
+            self._send_json(result, status)
+        except AppError as error:
+            self._send_error(error)
+        except (TypeError, ValueError) as error:
+            self._send_error(InvalidParameter(str(error)))
+        except Exception:
+            LOG.exception("Unhandled scan action error")
+            self._send_json({"error": "internal server error", "code": "INTERNAL_ERROR"}, 500)
+
 
 class Server(ThreadingHTTPServer):
     daemon_threads = True
-    allow_reuse_address = True
+    # Windows SO_REUSEADDR can let two app processes serve the same port.
+    allow_reuse_address = os.name != "nt"
 
     def __init__(self, address: tuple[str, int], handler: type[BaseHTTPRequestHandler], application: Application):
         self.application = application

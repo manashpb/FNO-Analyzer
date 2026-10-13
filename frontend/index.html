@@ -13,6 +13,7 @@
     <button id="modeLive" class="mode">Live</button>
     <button id="modeHist" class="mode">Historical</button>
     <button id="modeSectors" class="mode">Sectors</button>
+    <button id="modeScanners" class="mode">Scanners</button>
   </div>
   <div class="controls">
     <div id="symbolCtrls" class="ctrl-group">
@@ -23,7 +24,7 @@
     </div>
     <div id="liveCtrls" class="ctrl-group">
       <select id="sourceSelect" title="Live data source">
-        <option value="dhan">Dhan</option>
+        <option value="dhan">Dhan (AOC backup)</option>
         <option value="aoc">AOC</option>
       </select>
       <button id="refreshBtn" title="Refresh now">Refresh</button>
@@ -39,14 +40,26 @@
   <div class="updated" id="updated">—</div>
 </header>
 
-<div id="wlBackdrop" class="wl-backdrop hidden"></div>
+<div id="wlBackdrop" class="hidden"></div>
 <aside id="wlPane" class="wl-pane">
   <div class="wl-head">
     <div class="wl-title">Watchlist</div>
     <div class="wl-actions">
-      <button id="wlRebuild" title="Rebuild groups">↻</button>
+      <button id="wlRebuild" title="Refresh watchlist and sector groups">↻</button>
       <button id="wlClose" title="Close">✕</button>
     </div>
+  </div>
+  <div class="wl-controls">
+    <label>Watchlist <select id="wlSelect" aria-label="Active watchlist"></select></label>
+    <div class="wl-control-row"><input id="wlName" placeholder="New watchlist name" aria-label="New watchlist name"><button id="wlCreate">Create</button></div>
+    <div class="wl-control-row"><button id="wlClear">Clear list</button><button id="wlDelete">Delete list</button></div>
+    <label for="wlSymbols">Add symbols (comma separated)</label>
+    <textarea id="wlSymbols" rows="2" placeholder="RELIANCE, TCS, NIFTY"></textarea>
+    <button id="wlAdd">Add symbols</button>
+    <label for="wlTradingView">TradingView symbols</label>
+    <textarea id="wlTradingView" rows="3" readonly placeholder="Select a custom watchlist with symbols to copy"></textarea>
+    <button id="wlExport" title="Copy the combined symbol string to paste into TradingView">Copy TradingView string</button>
+    <p id="wlMessage" class="hint" role="status"></p>
   </div>
   <div class="wl-body" id="wlBody"></div>
 </aside>
@@ -61,11 +74,10 @@
     <h2>Charts <span class="hint">OI &amp; Volume in lots · collapsible</span></h2>
     <button id="chartsToggle" title="Collapse/expand charts">Collapse</button>
   </div>
-  <div class="charts" id="chartsWrap">
+  <div class="charts profile-charts" id="chartsWrap">
     <div class="panel"><h2>OI Profile</h2><canvas id="chartOi"></canvas></div>
     <div class="panel"><h2>OI Change</h2><canvas id="chartOiChg"></canvas></div>
     <div class="panel"><h2>Volume</h2><canvas id="chartVol"></canvas></div>
-    <div class="panel"><h2>IV Smile</h2><canvas id="chartIv"></canvas></div>
   </div>
 </div>
 
@@ -73,7 +85,14 @@
   <div class="chain-head">
     <h2>Option Chain <span class="hint" id="chainHint"></span></h2>
     <div class="chain-tools">
-      <label class="strike-count">Strikes
+      <label class="toggle"><input type="checkbox" id="chainSpreadMode"> Vertical Spread</label>
+      <label class="strike-count hidden" id="spreadWidthControl">Spread width
+        <select id="spreadWidth" title="Number of available strike intervals between legs"><option value="1">1 interval</option><option value="2">2 intervals</option><option value="3">3 intervals</option><option value="4">4 intervals</option></select>
+      </label>
+      <button id="spreadHelp" type="button" title="Explain spread quotes and call/put comparisons" aria-haspopup="dialog">ⓘ Spread help</button>
+      <button id="chainToggle" type="button" aria-expanded="true" aria-controls="chainBody">Collapse</button>
+      <label class="toggle hidden" id="spreadUnitsControl"><input type="checkbox" id="spreadRupees"> Interpretation in ₹ / lot</label>
+      <label class="strike-count"><span id="chainCountLabel">Strikes</span>
         <select id="chainStrikes" title="Number of strikes visible around ATM">
           <option value="4">4</option>
           <option value="6">6</option>
@@ -88,7 +107,7 @@
       </label>
     </div>
   </div>
-  <div class="table-wrap">
+  <div class="table-wrap" id="chainBody">
     <table class="chain" id="chainTable"></table>
   </div>
 </section>
@@ -123,6 +142,7 @@
   <div class="charts-head">
     <h2>Volatility Skew <span class="hint">scroll to zoom · drag to pan · double-click to reset · click legend to show/hide</span></h2>
     <div class="chain-tools">
+      <label class="term-k" title="Number of strikes on each side of ATM, plus the ATM strike">±<input type="number" id="skewStrikes" min="1" max="80" step="1" value="8"> strikes from ATM</label>
       <button id="skewReset" title="Reset zoom">Reset zoom</button>
       <button id="skewToggle" title="Collapse/expand section">Collapse</button>
     </div>
@@ -134,6 +154,40 @@
       <canvas id="chartSkew"></canvas>
       <div id="skewTooltip" class="tooltip hidden"></div>
     </div>
+  </div>
+</section>
+
+<section class="panel charts-zone" id="oiHeatmapSection">
+  <div class="charts-head"><h2>OI through the expiry cycle</h2><div class="chain-tools">
+    <select id="oiHeatExpiry" aria-label="Heatmap expiry"></select>
+    <label><input type="checkbox" id="oiHeatTop" checked> Top 3 OI strikes</label>
+    <label><input type="checkbox" id="oiHeatLabels" checked> OI labels</label>
+    <label title="Vertical lines between dates; horizontal lines at every strike"><input type="checkbox" id="oiHeatGrid"> Background grid</label>
+    <select id="oiHeatMode" disabled aria-label="Heatmap OI side"><option value="ce">CE OI</option><option value="pe">PE OI</option><option value="difference">CE − PE OI</option></select>
+    <label class="term-k" title="Strikes on each side of the latest archived ATM, plus ATM">±<input type="number" id="oiHeatStrikes" min="1" max="80" step="1" value="8" aria-label="Heatmap strikes on each side of ATM"> strikes from ATM</label>
+    <button id="oiHeatReset">Reset view</button><button id="oiHeatReload">Reload archive</button>
+    <button id="oiHeatToggle" type="button" aria-expanded="true" aria-controls="oiHeatBody">Collapse</button>
+  </div></div>
+  <div id="oiHeatBody">
+  <p class="hint">Closing OI · equal spacing per verified trading day · wheel: zoom both axes, Shift: dates, Alt: strikes · drag to pan · double-click to reset · CE − PE: positive = more call OI, negative = more put OI · white line: spot · Top 3: one column per day; highest CE red, highest PE green, shared highest yellow. Labels: CE/PE highest in lots, ranks 2/3 as percentages without cell colors; PCR = highest PE / highest CE.</p>
+  <p id="oiHeatStatus" class="hint" role="status"></p>
+  <div style="position:relative"><canvas id="oiHeatCanvas" style="width:100%;height:480px;touch-action:none" aria-label="OI heatmap with dates and strikes"></canvas><div id="oiHeatTip" class="tooltip hidden"></div></div>
+  </div>
+</section>
+
+<section class="panel charts-zone" id="zCycleSection">
+  <div class="charts-head"><h2>ATM OI Z-score through the expiry cycle</h2><div class="chain-tools">
+    <select id="zCycleExpiry" aria-label="Z-score cycle expiry"></select>
+    <select id="zCyclePeriod" aria-label="Z-score baseline period"><option value="3">3M baseline</option><option value="6">6M baseline</option><option value="12" selected>1Y baseline</option></select>
+    <label><input id="zCycleCE" type="checkbox" checked> CE Z</label>
+    <label><input id="zCyclePE" type="checkbox" checked> PE Z</label>
+    <button id="zCycleReset" type="button">Reset view</button><button id="zCycleReload" type="button">Reload archive</button>
+    <button id="zCycleToggle" type="button" aria-expanded="true" aria-controls="zCycleBody">Collapse</button>
+  </div></div>
+  <div id="zCycleBody">
+    <p class="hint">Daily closing ATM CE/PE OI Z-scores against prior monthly expiries at matching calendar DTE, using each day's own ATM. Sample SD; at least 3 prior expiries. Missing DTE uses the latest earlier observation, except DTE 0/1 which require exact matches. Raw OI; no lot imputation. Missing scores break lines. Wheel: zoom dates · drag: pan · double-click: reset.</p>
+    <p id="zCycleStatus" class="hint" role="status"></p>
+    <div style="position:relative"><canvas id="zCycleCanvas" style="width:100%;height:360px;touch-action:none" aria-label="Daily ATM CE and PE OI Z-scores through expiry"></canvas><div id="zCycleTip" class="tooltip hidden"></div></div>
   </div>
 </section>
 
@@ -191,6 +245,144 @@
   </div>
 </div>
 
+<div id="scannerPage" class="hidden">
+  <section class="panel scanner-panel" id="olPanel" data-clear-targets="olResults olExcluded" data-result-actions="olRun">
+    <div class="scanner-panel-header"><h2>Highest OI closing scanner</h2><div class="scanner-panel-actions"><button type="button" class="scanner-clear">Clear results</button><button type="button" class="scanner-collapse" aria-expanded="true" aria-controls="olPanelBody">Collapse</button></div></div>
+    <div id="olPanelBody" class="scanner-panel-body">
+      <p class="hint">Uses the latest archived closing chain. Bullish focuses on highest put OI; bearish on highest call OI. Update the historical OI database below to refresh closing data.</p>
+      <div class="scanner-controls">
+        <label>Direction <select id="olDirection"><option value="bullish">Bullish · put OI</option><option value="bearish">Bearish · call OI</option></select></label>
+        <label><span><input id="olDistanceOn" type="checkbox" checked> Price distance &lt; X%</span><input id="olDistance" type="number" min="0" step="0.1" value="2"></label>
+        <label><span><input id="olGapOn" type="checkbox" checked> Strike gap &gt; Y intervals</span><input id="olGap" type="number" min="0" step="1" value="2"></label>
+        <label><span><input id="olSecondOn" type="checkbox" checked> Second-highest OI &lt; Z%</span><input id="olSecond" type="number" min="0" max="100" step="0.1" value="50"></label>
+        <label>Second OI: last N trading dates<input id="olDays" type="number" min="0" max="60" step="1" value="0"></label>
+        <button id="olRun" type="button">Run scan</button>
+      </div>
+      <p class="hint">Distance = 100 × |close − selected highest-OI strike| / strike. Gap counts available strike intervals between CE and PE maxima. Second OI = second / highest OI on the selected side × 100. Ties prefer lower strikes. N=0 checks the latest close only; N&gt;0 includes the latest close and requires the second OI filter on every one of N dates for the same expiry. Missing history fails; other filters apply only to the latest close.</p>
+      <p id="olStatus" class="hint" role="status">No scan run yet.</p>
+      <div id="olResults" class="scanner-table"></div>
+      <details><summary>Excluded stocks and reasons</summary><div id="olExcluded" class="scanner-table"></div></details>
+    </div>
+  </section>
+  <section class="panel scanner-panel" id="zPanel" data-clear-targets="zResults zAll" data-result-actions="zRun zUpdate">
+    <div class="scanner-panel-header"><h2>ATM OI Z-score scanner</h2><div class="scanner-panel-actions"><button type="button" class="scanner-clear">Clear results</button><button type="button" class="scanner-collapse" aria-expanded="true" aria-controls="zPanelBody">Collapse</button></div></div>
+    <div id="zPanelBody" class="scanner-panel-body">
+
+    <p class="hint">Latest archived closing ATM CE/PE OI versus prior monthly expiries at exactly the same calendar DTE. Each date uses its own ATM; current expiry is excluded. Sample standard deviation, minimum 3 expiries, raw OI. Missing DTEs are never substituted.</p>
+    <div class="scanner-controls">
+      <button id="zUpdate" type="button">Update rolling Z-scores</button>
+      <label>Period <select id="zPeriod"><option value="3">Last 3 months</option><option value="6">Last 6 months</option><option value="12" selected>Last 1 year</option></select></label>
+      <label>Side / setup <select id="zSide"><option value="either">Either CE / PE</option><option value="ce">CE</option><option value="pe">PE</option><option value="ce_dominant">CE high + PE low</option><option value="pe_dominant">PE high + CE low</option></select></label>
+      <label>Direction <select id="zDirection"><option value="absolute">Absolute Z ≥</option><option value="high">Z ≥</option><option value="low">Z ≤ −</option></select></label>
+      <label>Threshold <input id="zThreshold" type="number" min="0" step="0.1" value="2"></label>
+      <label id="zOppositeControl" hidden>Opposite side Z ≤ <input id="zOpposite" type="number" step="0.1" value="0"></label>
+      <button id="zRun" type="button">Run Z-score scan</button>
+      <label>Sort <select id="zSort"><option value="strength">Scan strength</option><option value="ce">CE Z · high to low</option><option value="pe">PE Z · high to low</option></select></label>
+      <label>Search stock <input id="zSearch" type="search" placeholder="Stock name or symbol" autocomplete="off"></label>
+    </div>
+    <p class="hint">Combined setups require the dominant side Z ≥ Threshold AND the opposite side Z ≤ its cutoff (default 0; use −1 for a stricter filter). Both scores use the selected period. Scan strength ranks combined matches by dominant Z minus opposite Z. These setups describe OI concentration, not price direction. Click Run Z-score scan to apply setup or cutoff changes.</p>
+    <p id="zStatus" role="status" aria-live="polite">Loading stored Z-scores…</p>
+    <p class="hint">Update after Data update finishes. This uses local data only. Live scores compare current OI with stored closing baselines. Raw OI comparability across providers and corporate actions is not verified; historical lot sizes/units may be unknown. Positive Z means higher OI, not a bullish signal.</p>
+    <div id="zResults" class="scanner-table"></div>
+    <details><summary>All stored scores, sample dates and unavailable reasons</summary><div id="zAll" class="scanner-table"></div></details>
+
+    </div>
+  </section>
+  <section class="panel scanner-panel" id="oiPanel" data-clear-targets="oiCoverage oiStocks" data-result-actions="oiUpdate">
+    <div class="scanner-panel-header"><h2>Historical ATM OI database</h2><div class="scanner-panel-actions"><button type="button" class="scanner-clear">Clear results</button><button type="button" class="scanner-collapse" aria-expanded="true" aria-controls="oiPanelBody">Collapse</button></div></div>
+    <div id="oiPanelBody" class="scanner-panel-body">
+
+    <p class="hint">Daily closing chains including Greeks for the nearest expiry · trailing calendar year · current AOC NSE F&amp;O stocks. Saved dates are skipped and download gaps are resumed.</p>
+    <div class="scanner-controls">
+      <button id="oiUpdate" type="button">Data update</button>
+      <button id="oiCancel" type="button" disabled>Cancel update</button>
+    </div>
+    <p class="hint">Initial backfill can take many hours. AOC requests are serialized and paced. Your supplied holidays are excluded. If the first six stock fetches for a date are unavailable, remaining stocks for that date are skipped and the decision is remembered. Current-day data is excluded. Calendar DTE includes holidays; session DTE needs a complete exchange calendar.</p>
+    <p id="oiStatus" role="status" aria-live="polite">Loading archive status…</p>
+    <p id="oiCoverage" class="hint"></p>
+    <details><summary>Stock coverage and exclusions</summary><div id="oiStocks" class="scanner-table"></div></details>
+
+    </div>
+  </section>
+  <section class="panel scanner-panel" id="ivPanel" data-clear-targets="scanHighResults scanLowResults scanSkippedList" data-result-actions="scanRun">
+    <div class="scanner-panel-header"><h2>IV reversal scanner</h2><div class="scanner-panel-actions"><button type="button" class="scanner-clear">Clear results</button><button type="button" class="scanner-collapse" aria-expanded="true" aria-controls="ivPanelBody">Collapse</button></div></div>
+    <div id="ivPanelBody" class="scanner-panel-body">
+
+    <p class="hint">NSE F&amp;O stocks · current IVP cutoffs from Dhan IV movers · direction from smoothed ATM IV history</p>
+    <form id="scannerForm" class="scanner-controls">
+      <label>High IVP above <input id="scanHigh" type="number" min="0" max="100" step="0.1" value="80" required></label>
+      <label>Low IVP below <input id="scanLow" type="number" min="0" max="100" step="0.1" value="20" required></label>
+      <label class="scanner-condition"><input id="scanFalling" type="checkbox" checked> Require IV falling for high IVP</label>
+      <label class="scanner-condition"><input id="scanRising" type="checkbox" checked> Require IV rising for low IVP</label>
+      <label>Lookback observations <input id="scanDays" type="number" min="1" max="60" step="1" value="5" required></label>
+      <label>Smoothing observations <input id="scanSmooth" type="number" min="1" max="20" step="1" value="3" required></label>
+      <button id="scanRun" type="submit">Run scan</button>
+      <button id="scanCancel" type="button" disabled>Cancel</button>
+    </form>
+    <p class="hint">Disable a direction filter to show all stocks passing that block's IVP cutoff. Enabled filters compare smoothed IV with X daily observations earlier using a trailing moving average. Dhan's dated rows are used rather than calendar days; missing or invalid rows are excluded. Click Run scan to apply changes.</p>
+    <p id="scanStatus" role="status" aria-live="polite">Set your cutoffs and run a scan.</p>
+
+    </div>
+  </section>
+  <section class="panel scanner-panel" id="highPanel" data-clear-targets="scanHighResults" data-result-actions="scanRun">
+    <div class="scanner-panel-header"><h2 id="scanHighTitle">High IVP · IV cooling</h2><div class="scanner-panel-actions"><button type="button" class="scanner-clear">Clear results</button><button type="button" class="scanner-collapse" aria-expanded="true" aria-controls="highPanelBody">Collapse</button></div></div>
+    <div id="highPanelBody" class="scanner-panel-body">
+
+    <div class="scanner-table" id="scanHighResults">No scan run yet.</div>
+
+    </div>
+  </section>
+  <section class="panel scanner-panel" id="lowPanel" data-clear-targets="scanLowResults" data-result-actions="scanRun">
+    <div class="scanner-panel-header"><h2 id="scanLowTitle">Low IVP · IV rising</h2><div class="scanner-panel-actions"><button type="button" class="scanner-clear">Clear results</button><button type="button" class="scanner-collapse" aria-expanded="true" aria-controls="lowPanelBody">Collapse</button></div></div>
+    <div id="lowPanelBody" class="scanner-panel-body">
+
+    <div class="scanner-table" id="scanLowResults">No scan run yet.</div>
+
+    </div>
+  </section>
+  <details class="panel scanner-panel" id="scanSkipped" hidden><summary id="scanSkippedTitle">Skipped stocks</summary><button id="scanSkippedClear" type="button">Clear results</button><ul id="scanSkippedList"></ul></details>
+</div>
+
+<script src="/static/watchlists.js"></script>
+<script src="/static/scanner-panels.js"></script>
+<script src="/static/scanners.js"></script>
+<script src="/static/oi-history.js"></script>
+<script src="/static/oi-zscore.js"></script>
+<script src="/static/oi-levels.js"></script>
+<dialog id="spreadHelpDialog" class="spread-help" aria-labelledby="spreadHelpTitle">
+  <div class="spread-help-head"><h2 id="spreadHelpTitle">Understanding Vertical Spreads</h2><button id="spreadHelpClose" type="button" autofocus aria-label="Close spread help">Close ×</button></div>
+  <p>Spread mode compares call and put structures for the same symbol, expiry and two strikes. “Better” means more favorable quoted pricing for equivalent expiry exposure, not a prediction of market direction.</p>
+  <h3>Two legs per row</h3>
+  <p>K1 is the lower strike, K2 the higher strike, and W = K2 − K1. Width 1 pairs adjacent available strikes; width 2 skips one strike. Each row shows its actual width. Blue strike pairs contain an ATM leg.</p>
+  <p><strong>Call spread:</strong> lower-strike call minus higher-strike call. Buying it is a bullish call debit spread; selling it is a bearish call credit spread.</p>
+  <p><strong>Put spread:</strong> higher-strike put minus lower-strike put. Buying it is a bearish put debit spread; selling it is a bullish put credit spread.</p>
+  <h3>Column guide</h3>
+  <div class="table-wrap"><table><thead><tr><th>Column</th><th>Meaning / calculation</th></tr></thead><tbody>
+    <tr><td>Call Bid</td><td>Estimated credit to sell: call bid K1 − call ask K2.</td></tr>
+    <tr><td>Call Ask</td><td>Estimated debit to buy: call ask K1 − call bid K2.</td></tr>
+    <tr><td>Put Bid</td><td>Estimated credit to sell: put bid K2 − put ask K1.</td></tr>
+    <tr><td>Put Ask</td><td>Estimated debit to buy: put ask K2 − put bid K1.</td></tr>
+    <tr><td>Call Opp</td><td>W − Put Bid: compare directly with Call Ask. Lower cost wins for bullish exposure.</td></tr>
+    <tr><td>Put Opp</td><td>W − Call Bid: compare directly with Put Ask. Lower cost wins for bearish exposure.</td></tr>
+    <tr><td>Strike pair</td><td>K1 / K2, with the actual width and an ATM-leg marker.</td></tr>
+  </tbody></table></div>
+  <h3>How to read the interpretation</h3>
+  <p>At expiry, the long call spread and long put spread payoffs add to W. This lets us compare buying one spread with selling the opposite spread, translating the latter’s credit into a comparable cost.</p>
+  <ul><li><strong>Bullish:</strong> compare Call Ask with W − Put Bid. Lower cost wins: “Call debit” means buy the call spread; “Put credit” means sell the put spread.</li>
+  <li><strong>Bearish:</strong> compare Put Ask with W − Call Bid. Lower cost wins: “Put debit” means buy the put spread; “Call credit” means sell the call spread.</li></ul>
+  <p>Compare Ask with Opp on each side. Opp is red when higher than Ask, green when lower, and yellow when equal (to quote precision) or not comparable. Teal interpretation cells identify the cheaper quoted structure. Neutral cells mean similar cost or unavailable quotes. Calls use rose headers and puts use green headers. These colors identify pricing comparisons; they do not predict direction.</p>
+  <h3>Example (illustrative, not live data)</h3>
+  <p>For 1000 / 1050, W = 50. Suppose Call Bid/Ask = 18/20, and Put Bid/Ask = 33/35. Call Opp = 50 − 33 = 17; Put Opp = 50 − 18 = 32.</p>
+  <p><strong>Bullish:</strong> Call Ask 20 versus 50 − Put Bid 33 = 17 → Put credit better by 3.00 points. <strong>Bearish:</strong> Put Ask 35 versus 50 − Call Bid 18 = 32 → Call credit better by 3.00 points.</p>
+  <h3>Pricing limits</h3>
+  <p>Bid, Ask and Opp always show per-unit points. Enable “Interpretation in ₹ / lot” to multiply the interpretation advantage by the selected symbol’s lot size. For example, 3 points with a lot size of 50 is ₹150 per lot. If lot size is unavailable, the interpretation keeps points and explains why. Comparisons use the loaded snapshot’s bid/ask quotes, before fees, taxes, slippage, financing and margin costs. Both legs need sufficient quote quantity; displayed prices do not guarantee a combined fill.</p>
+  <p>Opp uses undiscounted width. Precise put–call parity uses discounted width, so interest and time to expiry can affect the comparison. Missing, zero/nonpositive or crossed leg quotes show — and are not replaced with LTP. Negative synthetic spread quotes can result from wide leg markets. Treat stale or unusual quotes cautiously; a displayed advantage is not proof of arbitrage.</p>
+</dialog>
+<script src="/static/spreads.js"></script>
+<script src="/static/profile-charts.js"></script>
+<script src="/static/oi-heatmap.js"></script>
+<script src="/static/oi-zcycle.js"></script>
+<script src="/static/chain-panels.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>

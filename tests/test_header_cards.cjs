@@ -1,0 +1,14 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync('frontend/app.js','utf8');
+const start=source.indexOf('  function card('),end=source.indexOf('  function tickerName()',start);
+const cards={innerHTML:''};const ctx=vm.createContext({state:{strikes:[{sp:100,cBid:10,cAsk:12,pBid:8,pAsk:9}]},mode:'live',source:'dhan',isHistorical:false,ivrIvp:null,ivrLookback:'1y',fmtInt:v=>v==null?'—':String(v),fmtNum:v=>v==null?'—':String(v),escapeHtml:v=>String(v),cls:()=>'',sign:()=>'',tickerName:()=> 'TCS',$:()=>cards});
+vm.runInContext(source.slice(start,end),ctx);
+assert.equal(ctx.atmSlipInfo({atm_strike:100},{Lot:50}).value,100);
+assert.equal(ctx.atmSlipInfo({atm_strike:100},{}).value,2);
+assert.equal(ctx.atmSlipInfo({atm_strike:100},{}).units,'points');
+ctx.state.strikes[0].cAsk=5;assert.equal(ctx.atmSlipInfo({atm_strike:100},{Lot:50}).value,50);
+ctx.state.strikes[0].pBid=0;assert.equal(ctx.atmSlipInfo({atm_strike:100},{Lot:50}).value,null);
+ctx.renderCards({spot:100,atm_strike:100,expiry:'2026-10-27'},{Lot:50});
+assert.equal((cards.innerHTML.match(/class="card /g)||[]).length,6);
+assert.equal((cards.innerHTML.match(/class="card card-wide"/g)||[]).length,2);
+console.log('Header grouping, valid slippage, missing metadata and crossed quotes passed');

@@ -1,0 +1,36 @@
+const fs = require('node:fs');
+const vm = require('node:vm');
+const assert = require('node:assert/strict');
+const source = fs.readFileSync('frontend/app.js', 'utf8');
+function section(start, end) { return source.slice(source.indexOf(start), source.indexOf(end, source.indexOf(start))); }
+const ctx = vm.createContext({});
+vm.runInContext(section('  function valueNumber(', '  function firstNum(') + section('  function ivrDateMs(', '  function fmtExpLabel(') + section('  function buildIvrPts(', '  function renderChipLegend('), ctx);
+assert.equal(ctx.ivrDateMs('04-10-2026'), Date.parse('2026-10-04T00:00:00+05:30'));
+assert.equal(ctx.ivrDateMs('30-09-2026'), Date.parse('2026-09-30T00:00:00+05:30'));
+assert.equal(ctx.ivrDateMs('25-Sep-2026'), Date.parse('2026-09-25T00:00:00+05:30'));
+assert.equal(ctx.ivrDateMs('31-02-2026'), null);
+assert.equal(ctx.ivrDateMs(''), null);
+assert.equal(ctx.ivrDateMs(1791052200000), 1791052200000);
+assert.match(ctx.fmtDayLabel(ctx.ivrDateMs('04-10-2026')), /04 Oct 26/);
+const pts = ctx.buildIvrPts({date:['04-10-2026','01-10-2026','30-09-2026'],ivp:[96.03,60.71,59.13],ivr:[11.52,2.99,2.86]});
+assert.deepEqual(Array.from(pts, p=>p.ivp), [59.13,60.71,96.03]);
+const method = section('    indexAt(px) {', '\n    X(t)').trim();
+const lookup = vm.runInContext('({' + method + '})', ctx);
+lookup.pts = [{t:0},{t:1},{t:10}]; lookup.view = {i0:0,i1:2}; lookup.geom = {x0:0,xspan:10,padL:0,cw:100};
+assert.equal(lookup.indexAt(12),1);
+assert.equal(lookup.indexAt(90),2);
+assert.equal(lookup.indexAt(-1),0);
+console.log('IVP/IVR frontend regression checks passed');
+// New data must keep visibility settings aligned with disabled legend chips.
+const ivrSetData = section('    setData(pts) {', '\n    message(text, color)').trim();
+const ivr = vm.runInContext('({' + ivrSetData + '})', ctx);
+ivr.hidden = new Set(['ivp']); ivr.tooltip = {classList:{add(){}}}; ivr.reset = () => {};
+ivr.setData([{t:1,ivp:40}]);
+assert.equal(ivr.hidden.has('ivp'), true);
+const skewSetData = section('    setData(exp, spot) {', '\n    message(text, color)').trim();
+const skewView = vm.runInContext('({' + skewSetData + '})', ctx);
+skewView.hidden = new Set(['call','otm']); skewView.tooltip = ivr.tooltip; skewView.reset = () => {};
+skewView.setData({options:[{strike:100,iv:20,optionType:'CE'},{strike:100,iv:21,optionType:'PE'}]},100);
+assert.equal(skewView.hidden.has('call'), true);
+assert.equal(skewView.hidden.has('otm'), true);
+console.log('IVP/IVR and skew visibility persists across new stock data');

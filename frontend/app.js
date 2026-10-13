@@ -18,8 +18,11 @@
   let source = "dhan";
   let dhanMap = null;
   let chainCount = 20;
+  let spreadMode = false;
+  let spreadWidth = 1;
+  let spreadRupees = false;
+  const profileCharts = new Map();
   let chartsVisible = true;
-  let wlGroups = null;
   let timer = null;
   let sectorsTimer = null;
   let sectorState = null;
@@ -112,23 +115,31 @@
     return s.length > 60 ? s.slice(0, 57) + "…" : s;
   }
 
-  function ivrDateMs(s) {
-    if (s === null || s === undefined) return null;
-    if (typeof s === "number") return s * 1000;
-    const text = String(s).trim();
-    const n = Number(text);
-    if (isFinite(n)) return n * 1000;
-    const parts = text.match(/^(\d{1,2})[-\/]([A-Za-z]{3})[-\/](\d{4})$/);
+  function ivrDateMs(value) {
+    if (value === null || value === undefined || String(value).trim() === "") return null;
+    const text = String(value).trim();
+    if (/^\d+(?:\.\d+)?$/.test(text)) {
+      const n = Number(text);
+      const ms = n < 1e12 ? n * 1000 : n;
+      return isFinite(ms) ? ms : null;
+    }
+    // Dhan supplies day-month-year; never let Date.parse interpret it as US dates.
+    const parts = text.match(/^(\d{1,2})[-\/]([A-Za-z]{3}|\d{1,2})[-\/](\d{4})$/);
     if (parts) {
-      const parsed = Date.parse(`${parts[1]} ${parts[2]} ${parts[3]}T00:00:00+05:30`);
-      return isFinite(parsed) ? parsed : null;
+      const months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+      const month = /^\d+$/.test(parts[2]) ? Number(parts[2]) - 1 : months.indexOf(parts[2].toLowerCase());
+      const day = Number(parts[1]), year = Number(parts[3]);
+      const utc = Date.UTC(year, month, day);
+      const check = new Date(utc);
+      if (month < 0 || month > 11 || check.getUTCFullYear() !== year || check.getUTCMonth() !== month || check.getUTCDate() !== day) return null;
+      return utc - 19800000;
     }
     const parsed = Date.parse(text);
     return isFinite(parsed) ? parsed : null;
   }
 
   function fmtDayLabel(ms) {
-    return new Date(ms).toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+    return new Date(ms).toLocaleDateString("en-GB", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "2-digit" });
   }
 
   function fmtExpLabel(s) {
@@ -161,14 +172,15 @@
   function atmSlipInfo(m, T) {
     const lot = T && T.Lot != null ? +T.Lot : null;
     const row = state && state.strikes.find(r => r.sp === m.atm_strike);
-    if (!row || lot == null || !isFinite(lot)) return { value: null, sub: "—" };
-    const ce = row.cBid != null && row.cAsk != null ? row.cAsk - row.cBid : null;
-    const pe = row.pBid != null && row.pAsk != null ? row.pAsk - row.pBid : null;
+    if (!row) return { value: null, sub: "ATM quotes unavailable" };
+    const ce = row.cBid > 0 && row.cAsk >= row.cBid ? row.cAsk - row.cBid : null;
+    const pe = row.pBid > 0 && row.pAsk >= row.pBid ? row.pAsk - row.pBid : null;
     const spreads = [ce, pe].filter(v => v != null);
     if (!spreads.length) return { value: null, sub: "no bid/ask data" };
     return {
-      value: Math.max(...spreads) * lot,
-      sub: `max(CE ${ce != null ? fmtNum(ce) : "—"}, PE ${pe != null ? fmtNum(pe) : "—"}) × lot ${fmtInt(lot)}`,
+      value: Math.max(...spreads) * (lot > 0 && isFinite(lot) ? lot : 1),
+      units: lot > 0 && isFinite(lot) ? "₹ / lot" : "points",
+      sub: `max(CE ${ce != null ? fmtNum(ce) : "—"}, PE ${pe != null ? fmtNum(pe) : "—"})` + (lot > 0 && isFinite(lot) ? ` × lot ${fmtInt(lot)}` : " · lot size unavailable"),
     };
   }
 
@@ -177,6 +189,13 @@
     const lot = T && T.Lot != null ? fmtInt(T.Lot) : "—";
     const lotSub = T && T.Diff != null ? `Strike step ${T.Diff}` : "";
     const slip = atmSlipInfo(m, T);
+    const z = mode === "live" ? state?.oi_zscore : null;
+    const zSub = z ? [3, 6, 12].map(months => {
+      const p = z.periods?.[String(months)];
+      return `<span title="${escapeHtml(`CE: ${p?.ce?.reason || 'available'}; PE: ${p?.pe?.reason || 'available'}`)}">${months}M CE ${fmtNum(p?.ce?.z)} / PE ${fmtNum(p?.pe?.z)} (n ${p?.ce?.n ?? 0}/${p?.pe?.n ?? 0})</span>`;
+    }).join("<br>") + `<br>${escapeHtml(z.reason || `ATM ${z.atm_strike} · ${z.dte} calendar DTE · raw OI`)}${z.basis === 'archived_close' ? `<br>Close ${escapeHtml(z.day)} · ${z.dte} calendar DTE` : ''}` +
+      (z.periods?.['12']?.ce?.reason ? `<br>CE: ${escapeHtml(z.periods['12'].ce.reason)}` : '') +
+      (z.periods?.['12']?.pe?.reason ? `<br>PE: ${escapeHtml(z.periods['12'].pe.reason)}` : '') : "";
     const ivpD = ivrIvp && ivrIvp.data ? ivrIvp.data : null;
     const latest = ivrIvp && ivrIvp.latest;
     const ivpLatest = ivpD ? (valueNumber(latest && latest.ivp) ?? firstNum(ivpD.ivp)) : null;
@@ -186,18 +205,19 @@
       : ivrLatest === null
         ? (source === "dhan" ? (mode === "live" ? "no data" : "live only") : "Dhan source only")
         : "IVR " + fmtNum(ivrLatest) + " · " + ivrLookback;
+    const pair = (first, second) => `<div class="card card-pair">${first}${second}</div>`;
+    const metric = (label, value, sub) => `<div class="paired-metric"><div class="label">${escapeHtml(label)}</div><div class="value">${escapeHtml(value)}</div><div class="sub">${sub || ""}</div></div>`;
     $("cards").innerHTML = [
-      card(tickerName(), fmtNum(m.spot), `<span class="${cls(m.spot_chg)}">${sign(m.spot_chg)}${fmtNum(m.spot_chg)}</span>` + (isHistorical ? " (historical)" : "")),
-      card("Future", fmtNum(m.fut), `<span class="${cls(m.fut_chg)}">${sign(m.fut_chg)}${fmtNum(m.fut_chg)}</span>`),
-      card("Lot Size", lot, lotSub),
-      card("ATM Slippage", slip.value == null ? "—" : fmtNum(slip.value), slip.sub),
-      card("PCR (OI)", fmtNum(m.pcr_oi), `OI chg PCR ${fmtNum(m.pcr_oi_chg)}`),
-      card("PCR (Vol)", fmtNum(m.pcr_vol), `Vol CE ${fmtInt(m.total_vol_ce)} · PE ${fmtInt(m.total_vol_pe)}`),
-      card("Max Pain", fmtNum(m.max_pain), `<span class="${cls(m.spot - (m.max_pain ?? m.spot))}">${sign(d)}${fmtNum(d)} from spot</span>`),
-      card("ATM IV", `${fmtNum(m.atm_iv_ce)}% / ${fmtNum(m.atm_iv_pe)}%`, `CE / PE · skew ${fmtNum(m.iv_skew)}`),
-      card("IVP", ivpLatest === null ? "—" : fmtNum(ivpLatest) + "%", ivpSub),
-      card("Total OI", fmtInt(m.total_oi), `CE ${fmtInt(m.total_oi_ce)} · PE ${fmtInt(m.total_oi_pe)}`),
-      card("Max OI Strikes", `${fmtInt(m.max_oi_ce)} / ${fmtInt(m.max_oi_pe)}`, `CE / PE · expiry ${m.expiry}`),
+      pair(metric(`${tickerName()} · Spot`, fmtNum(m.spot), `<span class="${cls(m.spot_chg)}">${sign(m.spot_chg)}${fmtNum(m.spot_chg)}</span>` + (isHistorical ? " (historical)" : "")),
+        metric("Future", fmtNum(m.fut), `<span class="${cls(m.fut_chg)}">${sign(m.fut_chg)}${fmtNum(m.fut_chg)}</span>`)),
+      pair(metric("Lot Size", lot, lotSub || (lot === "—" ? "Metadata unavailable" : "")),
+        metric(`ATM Slippage · ${slip.units || "points"}`, slip.value == null ? "—" : fmtNum(slip.value), escapeHtml(slip.sub))),
+      pair(metric("PCR (OI)", fmtNum(m.pcr_oi), `OI chg PCR ${fmtNum(m.pcr_oi_chg)}`),
+        metric("Max Pain", fmtNum(m.max_pain), `<span class="${cls(d)}">${sign(d)}${fmtNum(d)} from spot</span>`)),
+      pair(metric("ATM IV · CE / PE", `${fmtNum(m.atm_iv_ce)}% / ${fmtNum(m.atm_iv_pe)}%`, `Skew ${fmtNum(m.iv_skew)}`),
+        metric("IVP", ivpLatest === null ? "—" : fmtNum(ivpLatest) + "%", escapeHtml(ivpSub))),
+      card("ATM OI Z-score · CE / PE", z ? `${fmtNum(z.periods?.['12']?.ce?.z)} / ${fmtNum(z.periods?.['12']?.pe?.z)} · 1Y` : "—", zSub).replace('class="card"', 'class="card card-wide"'),
+      card("Max OI Strikes", `${fmtInt(m.max_oi_ce)} / ${fmtInt(m.max_oi_pe)}`, `CE / PE · expiry ${escapeHtml(m.expiry)}`).replace('class="card"', 'class="card card-wide"'),
     ].join("");
   }
 
@@ -256,6 +276,8 @@
 
   function renderChain(m) {
     if (!state) return;
+    $("chainTable").classList.toggle("spread-chain", spreadMode);
+    if (spreadMode) { renderSpreads(m); return; }
     const all = state.strikes.filter(r => r.sp != null);
     const lot = state.ticker && state.ticker.Lot != null ? +state.ticker.Lot : null;
     const view = chainWindow(all, m.atm_strike, m.spot, chainCount);
@@ -298,6 +320,25 @@
       (source === "dhan" ? " · bid/ask via Dhan" : "");
   }
 
+  function renderSpreads(m) {
+    const pairs = window.VerticalSpreads.build(state.strikes, spreadWidth);
+    const view = chainWindow(pairs, m.atm_strike, m.spot, chainCount);
+    const price = value => value == null ? "—" : value.toFixed(2);
+    const lot = Number(state.ticker && state.ticker.Lot);
+    const interpretation = result => `<td class="spread-reading ${result.winner ? "spread-edge" : ""}">${window.VerticalSpreads.interpretation(result, spreadRupees, lot)}</td>`;
+    const header = `<colgroup><col style="width:230px"><col span="3"><col style="width:150px"><col span="3"><col style="width:230px"></colgroup><thead><tr><th colspan="4" class="side-ce">CALL SPREAD · lower call − higher call</th><th rowspan="2" class="strike-h">Strike pair</th><th colspan="4" class="side-pe">PUT SPREAD · higher put − lower put</th></tr><tr>
+      <th title="Compare Call Ask with Opp (width minus Put Bid); lower cost wins">Bullish interpretation</th><th>Bid</th><th>Ask</th><th title="Width minus Put Bid: compare with Call Ask">Opp</th>
+      <th title="Width minus Call Bid: compare with Put Ask">Opp</th><th>Bid</th><th>Ask</th><th title="Compare Put Ask with Opp (width minus Call Bid); lower cost wins">Bearish interpretation</th></tr></thead>`;
+    $("chainTable").innerHTML = header + view.map(r => `<tr class="${r.sp === m.atm_strike || r.upper === m.atm_strike ? "atm-row" : ""}">
+      ${interpretation(r.bullish)}<td>${price(r.call.bid)}</td><td>${price(r.call.ask)}</td><td class="${window.VerticalSpreads.oppClass(r.callOpp, r.call.ask)}">${price(r.callOpp)}</td>
+      <td class="strike">${r.sp} / ${r.upper}<small>Width ${r.width}${r.sp === m.atm_strike || r.upper === m.atm_strike ? " · ATM leg" : ""}</small></td>
+      <td class="${window.VerticalSpreads.oppClass(r.putOpp, r.put.ask)}">${price(r.putOpp)}</td><td>${price(r.put.bid)}</td><td>${price(r.put.ask)}</td>${interpretation(r.bearish)}</tr>`).join("") +
+      (!view.length ? '<tr><td colspan="9" class="spread-reading">Not enough strikes for this spread width.</td></tr>' : "");
+    $("chainHint").textContent = `${view.length}/${pairs.length} pairs · ${spreadWidth} strike interval${spreadWidth > 1 ? "s" : ""} · quotes in points · interpretation ${spreadRupees && lot > 0 ? "in ₹ / lot" : "in points"} · estimated quotes before costs` +
+      (state.coverage && state.coverage.is_truncated ? " · loaded chain is truncated" : "") +
+      (view.length && !view.some(r => r.call.mid != null || r.put.mid != null) ? " · valid bid/ask quotes unavailable from this snapshot" : "");
+  }
+
   function setupCanvas(canvas) {
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
@@ -319,156 +360,21 @@
     return n * Math.pow(10, exp);
   }
 
-  function drawAxis(ctx, W, H, maxVal, padL, padR, padT, padB) {
-    ctx.strokeStyle = GRID;
-    ctx.fillStyle = TICK;
-    ctx.font = "10px Segoe UI";
-    ctx.textAlign = "right";
-    ctx.lineWidth = 1;
-    const cw = W - padL - padR, ch = H - padT - padB;
-    const ticks = 5;
-    for (let i = 0; i <= ticks; i++) {
-      const y = padT + ch * (1 - i / ticks);
-      ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
-      const val = maxVal * i / ticks;
-      ctx.fillText(fmtInt(val), padL - 6, y + 4);
-    }
-    return { cw, ch };
-  }
-
-  function withWindow(strikes, spot, half) {
-    if (spot == null) return strikes;
-    return strikes.filter(r => r.sp != null && Math.abs(r.sp - spot) <= half);
-  }
-
-  function drawGroupedBars(canvas, strikes, spot, getCe, getPe, label) {
-    if (!state) return;
-    const { ctx, W, H } = setupCanvas(canvas);
-    const win = withWindow(strikes, spot, 250);
-    if (!win.length) return;
-    const vals = win.flatMap(r => [getCe(r) || 0, getPe(r) || 0]);
-    const maxVal = niceMax(Math.max(...vals.filter(v => isFinite(v))));
-    const padL = 54, padR = 10, padT = 14, padB = 22;
-    const { cw, ch } = drawAxis(ctx, W, H, maxVal, padL, padR, padT, padB);
-    ctx.textAlign = "center"; ctx.font = "10px Segoe UI";
-    const step = cw / win.length;
-    const bw = Math.max(2, Math.min(step * 0.32, 16));
-    win.forEach((r, i) => {
-      const cx = padL + step * i + step / 2;
-      const ceV = getCe(r) || 0, peV = getPe(r) || 0;
-      const ceH = ch * ceV / maxVal, peH = ch * peV / maxVal;
-      ctx.fillStyle = CE;
-      ctx.fillRect(cx - bw - 1, padT + ch - ceH, bw, ceH);
-      ctx.fillStyle = PE;
-      ctx.fillRect(cx + 1, padT + ch - peH, bw, peH);
-      if (i % 6 === 0 || i === win.length - 1) {
-        ctx.fillStyle = TICK;
-        ctx.fillText(String(r.sp), cx, H - 6);
-      }
-    });
-    if (spot != null && spot >= win[0].sp - 50 && spot <= win[win.length - 1].sp + 50) {
-      const sx = padL + (spot - win[0].sp) / (win[win.length - 1].sp - win[0].sp) * cw;
-      ctx.strokeStyle = ACCENT;
-      ctx.setLineDash([4, 3]);
-      ctx.beginPath(); ctx.moveTo(sx, padT); ctx.lineTo(sx, padT + ch); ctx.stroke();
-      ctx.setLineDash([]);
-    }
-    legend(ctx, W, padT, label);
-    peakMarker(ctx, W, H, padL, padR, padT, padB, cw, ch, maxVal, win, getCe, getPe);
-  }
-
-  function legend(ctx, W, top, label) {
-    ctx.font = "11px Segoe UI";
-    ctx.textAlign = "right";
-    const names = typeof label === "string" ? [label] : label;
-    names.forEach((n, i) => {
-      ctx.fillStyle = n.color || "#e6edf3";
-      ctx.fillText(n.text, W - 10, top + i * 14);
-    });
-  }
-
-  function peakMarker(ctx, W, H, padL, padR, padT, padB, cw, ch, maxVal, win, getCe, getPe) {
-    let mCe = null, mPe = null;
-    win.forEach(r => {
-      const c = getCe(r) || 0, p = getPe(r) || 0;
-      if (c >= 0 && (mCe === null || c > mCe.v)) mCe = { i: win.indexOf(r), v: c };
-      if (p >= 0 && (mPe === null || p > mPe.v)) mPe = { i: win.indexOf(r), v: p };
-    });
-    const draw = (m, color, tag) => {
-      if (!m) return;
-      const cx = padL + cw * (m.i + 0.5) / win.length;
-      const y = padT + ch - ch * m.v / maxVal;
-      ctx.fillStyle = color;
-      ctx.beginPath(); ctx.arc(cx, y - 6, 3, 0, Math.PI * 2); ctx.fill();
-      ctx.font = "9px Segoe UI"; ctx.textAlign = "center";
-      ctx.fillText(tag, cx, y - 12);
-    };
-    draw(mCe, CE, win[mCe.i]?.sp + " CE");
-    draw(mPe, PE, win[mPe.i]?.sp + " PE");
-  }
-
-  function drawIv(canvas, strikes, spot) {
-    if (!state) return;
-    const { ctx, W, H } = setupCanvas(canvas);
-    const win = withWindow(strikes, spot, 250).filter(r => r.cIV != null || r.pIV != null);
-    if (!win.length) return;
-    const padL = 40, padR = 10, padT = 14, padB = 22;
-    const cw = W - padL - padR, ch = H - padT - padB;
-    const xs = win.map(r => r.sp);
-    const xMin = xs[0], xMax = xs[xs.length - 1];
-    let maxY = 0;
-    win.forEach(r => { maxY = Math.max(maxY, r.cIV || 0, r.pIV || 0); });
-    const maxVal = niceMax(maxY * 1.05 || 1);
-    drawAxis(ctx, W, H, maxVal, padL, padR, padT, padB);
-    const X = v => padL + (v - xMin) / (xMax - xMin || 1) * cw;
-    const Y = v => padT + ch - ch * v / maxVal;
-    const line = (get, color) => {
-      ctx.strokeStyle = color; ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      let started = false;
-      win.forEach(r => {
-        const v = get(r);
-        if (v == null) { started = false; return; }
-        const x = X(r.sp), y = Y(v);
-        if (!started) { ctx.moveTo(x, y); started = true; }
-        else ctx.lineTo(x, y);
-      });
-      ctx.stroke();
-      ctx.fillStyle = color;
-      win.forEach((r, i) => {
-        const v = get(r);
-        if (v == null) return;
-        if (i % 4 === 0) { ctx.beginPath(); ctx.arc(X(r.sp), Y(v), 2, 0, Math.PI * 2); ctx.fill(); }
-      });
-    };
-    line(r => r.cIV, CE);
-    line(r => r.pIV, PE);
-    if (spot != null && spot >= xMin && spot <= xMax) {
-      ctx.strokeStyle = ACCENT; ctx.setLineDash([4, 3]);
-      ctx.beginPath(); ctx.moveTo(X(spot), padT); ctx.lineTo(X(spot), padT + ch); ctx.stroke();
-      ctx.setLineDash([]);
-    }
-    ctx.font = "10px Segoe UI"; ctx.textAlign = "left";
-    ctx.fillStyle = TICK;
-    win.forEach((r, i) => { if (i % 6 === 0) ctx.fillText(String(r.sp), X(r.sp), H - 6); });
-    legend(ctx, W, padT, [{ text: "CE IV", color: CE }, { text: "PE IV", color: PE }]);
-  }
-
   function renderCharts() {
     if (!state || !chartsVisible) return;
     const st = state.strikes, m = state.metrics;
     const lot = state.ticker && state.ticker.Lot != null ? +state.ticker.Lot : null;
     const lots = (v) => v == null || lot == null || lot <= 0 ? v : v / lot;
-    const L = lot != null && lot > 0 ? " (lots)" : "";
-    drawGroupedBars($("chartOi"), st, m.spot, r => lots(r.cOI), r => lots(r.pOI), [{ text: "CE OI" + L, color: CE }, { text: "PE OI" + L, color: PE }]);
-    drawGroupedBars($("chartOiChg"), st, m.spot, r => lots(r.cOIC), r => lots(r.pOIC), [{ text: "CE ΔOI" + L, color: CE }, { text: "PE ΔOI" + L, color: PE }]);
-    drawGroupedBars($("chartVol"), st, m.spot, r => lots(r.cVol), r => lots(r.pVol), [{ text: "CE Vol" + L, color: CE }, { text: "PE Vol" + L, color: PE }]);
-    drawIv($("chartIv"), st, m.spot);
+    [["chartOi", "cOI", "pOI"], ["chartOiChg", "cOIC", "pOIC"], ["chartVol", "cVol", "pVol"]].forEach(([id, ce, pe]) => {
+      if (!profileCharts.has(id)) profileCharts.set(id, new window.ProfileChart($(id)));
+      profileCharts.get(id).setData(st.map(r => ({sp:r.sp, ce:lots(r[ce]), pe:lots(r[pe])})), m.atm_strike, lot > 0 ? "lots" : "units", tickerName());
+    });
   }
 
   function renderAll() {
     if (!state) return;
     const m = state.metrics;
+    if (ticker?.Name === state.ticker?.Name) state.ticker = {...ticker, ...state.ticker, Lot: state.ticker.Lot ?? ticker.Lot};
     renderCards(m, state.ticker);
     renderChain(m);
     renderCharts();
@@ -490,10 +396,10 @@
       if (t === null || !isFinite(t)) continue;
       pts.push({
         t,
-        spot: data.spotPrice ? data.spotPrice[i] : null,
-        ivr: data.ivr ? data.ivr[i] : null,
-        ivp: data.ivp[i],
-        iv: data.iv ? data.iv[i] : null,
+        spot: valueNumber(data.spotPrice ? data.spotPrice[i] : null),
+        ivr: valueNumber(data.ivr ? data.ivr[i] : null),
+        ivp: valueNumber(data.ivp[i]),
+        iv: valueNumber(data.iv ? data.iv[i] : null),
       });
     }
     pts.sort((a, b) => a.t - b.t);
@@ -554,7 +460,6 @@
 
     setData(pts) {
       this.pts = pts;
-      this.hidden = new Set();
       this.hover = null;
       this.tooltip.classList.add("hidden");
       this.reset();
@@ -576,12 +481,16 @@
     }
 
     indexAt(px) {
-      const rect = this.canvas.getBoundingClientRect();
-      const cw = rect.width - this.padL - this.padR;
-      const span = this.view.i1 - this.view.i0 || 1;
-      const f = (px - this.padL) / cw;
-      const i = Math.round(this.view.i0 + f * span);
-      return Math.max(this.view.i0, Math.min(this.view.i1, i));
+      const g = this.geom;
+      if (!g || !this.pts.length) return this.view.i0;
+      const target = g.x0 + Math.max(0, Math.min(1, (px - g.padL) / g.cw)) * g.xspan;
+      let lo = this.view.i0, hi = this.view.i1;
+      while (lo < hi) {
+        const mid = Math.floor((lo + hi) / 2);
+        if (this.pts[mid].t < target) lo = mid + 1;
+        else hi = mid;
+      }
+      return lo > this.view.i0 && target - this.pts[lo - 1].t <= this.pts[lo].t - target ? lo - 1 : lo;
     }
 
     X(t) { const g = this.geom; return g.padL + (t - g.x0) / g.xspan * g.cw; }
@@ -689,13 +598,13 @@
         let txt = "—";
         if (v !== null && isFinite(v)) {
           if (s.key === "spot") txt = fmtNum(v, 2);
-          else if (s.key === "ivr") txt = Math.round(v) + "%";
-          else if (s.key === "ivp") txt = Math.round(v) + "%";
+          else if (s.key === "ivr") txt = fmtNum(v, 2) + "%";
+          else if (s.key === "ivp") txt = fmtNum(v, 2) + "%";
           else txt = Number(v).toFixed(1) + "%";
         }
         rows.push(`<div class="tt-row"><span><i style="background:${s.color}"></i>${s.label}</span><span>${txt}</span></div>`);
       });
-      this.tooltip.innerHTML = `<div class="tt-t">${escapeHtml(new Date(p.t).toLocaleString())}</div>` + rows.join("");
+      this.tooltip.innerHTML = `<div class="tt-t">${escapeHtml(new Date(p.t).toLocaleDateString("en-GB", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric" }))}</div>` + rows.join("");
       this.tooltip.classList.remove("hidden");
       const rect = this.canvas.getBoundingClientRect();
       this.tooltip.style.left = Math.max(8, Math.min(rect.width - 200, x + 14)) + "px";
@@ -711,7 +620,7 @@
         const anchor = this.indexAt(e.clientX - rect.left);
         const factor = e.deltaY < 0 ? 1 / 1.25 : 1.25;
         const span = this.view.i1 - this.view.i0 + 1;
-        const newSpan = Math.max(3, Math.min(this.pts.length, Math.round(span * factor) + 1));
+        const newSpan = Math.min(this.pts.length, Math.max(3, Math.round(span * factor) + 1));
         const frac = (anchor - this.view.i0) / span;
         let i0 = this.view.i0 + Math.round((span - newSpan) * frac);
         i0 = Math.max(0, Math.min(i0, this.pts.length - newSpan));
@@ -767,6 +676,7 @@
       this.putIv = new Map();
       this.atm = null;
       this.spot = null;
+      this.strikesPerSide = 8;
       this.hidden = new Set();
       this.view = { i0: 0, i1: 0 };
       this.drag = null;
@@ -778,7 +688,7 @@
 
     getSeries() {
       return [
-        { key: "call", label: "Call IV", color: "#42a5f5" },
+        { key: "call", label: "Call IV", color: "#00ff00" },
         { key: "put", label: "Put IV", color: "#ef5350" },
         { key: "otm", label: "OTM IV", color: "#26c6da" },
       ];
@@ -816,7 +726,6 @@
         if (Math.abs(s - spot) < Math.abs(atm - spot)) atm = s;
       });
       this.atm = atm;
-      this.hidden = new Set();
       this.hover = null;
       this.tooltip.classList.add("hidden");
       this.reset();
@@ -832,8 +741,12 @@
 
     reset() {
       if (!this.strikes.length) return;
-      this.view.i0 = 0;
-      this.view.i1 = this.strikes.length - 1;
+      const atmIndex = this.strikes.indexOf(this.atm);
+      const center = atmIndex >= 0 ? atmIndex : 0;
+      this.view.i0 = Math.max(0, center - this.strikesPerSide);
+      this.view.i1 = Math.min(this.strikes.length - 1, center + this.strikesPerSide);
+      this.hover = null;
+      this.tooltip.classList.add("hidden");
       this.draw();
     }
 
@@ -862,22 +775,33 @@
       const buf = (xMax - xMin) * 0.04 || 1;
       xMin -= buf; xMax += buf;
 
-      let maxIv = 0;
-      win.forEach(s => {
-        if (!this.hidden.has("call")) { const v = this.callIv.get(s); if (v != null && v > maxIv) maxIv = v; }
-        if (!this.hidden.has("put")) { const v = this.putIv.get(s); if (v != null && v > maxIv) maxIv = v; }
-      });
-      const maxVal = niceMax(maxIv * 1.08 || 1);
-      const yLo = 0, yHi = maxVal;
-      this.geom = { W, H, cw, ch, padL, padR, padT, padB, xMin, xMax, yLo, yHi };
-
-      drawAxis(ctx, W, H, maxVal, padL, padR, padT, padB);
-
       const series = [
-        { key: "call", get: (s) => this.callIv.get(s) ?? null, color: "#42a5f5", dash: [] },
+        { key: "call", get: (s) => this.callIv.get(s) ?? null, color: "#00ff00", dash: [] },
         { key: "put", get: (s) => this.putIv.get(s) ?? null, color: "#ef5350", dash: [] },
         { key: "otm", get: (s) => this.otm(s), color: "#26c6da", dash: [6, 4] },
       ];
+      const visibleValues = [];
+      series.forEach(sr => {
+        if (this.hidden.has(sr.key)) return;
+        win.forEach(strike => {
+          const value = sr.get(strike);
+          if (value != null && isFinite(value)) visibleValues.push(value);
+        });
+      });
+      const minIv = visibleValues.length ? Math.min(...visibleValues) : 0;
+      const maxIv = visibleValues.length ? Math.max(...visibleValues) : 1;
+      const padding = Math.max((maxIv - minIv) * 0.08, 0.1);
+      const yLo = Math.max(0, minIv - padding), yHi = maxIv + padding;
+      this.geom = { W, H, cw, ch, padL, padR, padT, padB, xMin, xMax, yLo, yHi };
+
+      ctx.strokeStyle = GRID; ctx.fillStyle = TICK;
+      ctx.font = "10px Segoe UI"; ctx.textAlign = "right"; ctx.lineWidth = 1;
+      for (let i = 0; i <= 5; i++) {
+        const value = yLo + (yHi - yLo) * i / 5;
+        const y = this.Y(value);
+        ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
+        ctx.fillText(fmtNum(value, 2), padL - 6, y + 4);
+      }
 
       series.forEach(sr => {
         if (this.hidden.has(sr.key)) return;
@@ -941,7 +865,7 @@
       const fmtIv = (v) => (v === null || v === undefined || !isFinite(v)) ? "—" : Number(v).toFixed(1) + "%";
       const rows = [`<div class="tt-t">Strike ${fmtNum(strike, 0)}${strike === this.atm ? " · ATM" : ""}</div>`];
       const entries = [
-        { key: "call", label: "Call IV", color: "#42a5f5", get: (s) => this.callIv.get(s) ?? null },
+        { key: "call", label: "Call IV", color: "#00ff00", get: (s) => this.callIv.get(s) ?? null },
         { key: "put", label: "Put IV", color: "#ef5350", get: (s) => this.putIv.get(s) ?? null },
         { key: "otm", label: "OTM IV", color: "#26c6da", get: (s) => this.otm(s) },
       ];
@@ -969,7 +893,7 @@
         const anchor = this.indexAt(e.clientX - rect.left);
         const factor = e.deltaY < 0 ? 1 / 1.25 : 1.25;
         const span = this.view.i1 - this.view.i0 + 1;
-        const newSpan = Math.max(3, Math.min(this.strikes.length, Math.round(span * factor) + 1));
+        const newSpan = Math.min(this.strikes.length, Math.max(3, Math.round(span * factor) + 1));
         const frac = (anchor - this.view.i0) / span;
         let i0 = this.view.i0 + Math.round((span - newSpan) * frac);
         i0 = Math.max(0, Math.min(i0, this.strikes.length - newSpan));
@@ -1471,7 +1395,7 @@ renderSkewExps();
   }
 
   async function loadAnalytics() {
-    if (!ticker || mode !== "live" || source !== "dhan" || !dhanMap) {
+    if (!ticker || mode !== "live" || source !== "dhan" || !dhanMap || (state && state.source === "aoc")) {
       clearAnalytics();
       return;
     }
@@ -1922,102 +1846,20 @@ renderSkewExps();
   }
 
   function syncWlActive() {
-    if (!wlGroups) return;
-    document.querySelectorAll(".wl-item").forEach(el => el.classList.toggle("sel", el.dataset.name === ticker.Name));
+    window.watchlists.setActive(ticker?.Name);
   }
 
-  async function buildWatchlist() {
-    const body = $("wlBody");
-    body.innerHTML = `<div class="wl-load">Building watchlist…</div>`;
-    const byName = new Map(tickers.map(t => [t.Name, t]));
-    const groups = { Indices: [], Commodities: [] };
-    if (dhanMap && dhanMap.mapped) {
-      for (const m of dhanMap.mapped) {
-        const t = byName.get(m.aoc);
-        if (!t) continue;
-        if (String(m.seg) === "0") groups.Indices.push(t);
-      }
-      for (const u of dhanMap.unmapped || []) {
-        if ((u.reason || "").indexOf("segment 'M'") >= 0) {
-          const t = byName.get(u.aoc);
-          if (t) groups.Commodities.push(t);
-        }
-      }
-    }
-    const placed = new Set();
-    const order = ["Indices"];
-    try {
-      const d = await fetchJson("/api/sectors");
-      for (const s of d.sectors || []) {
-        const name = s.displaySymbol || s.symbol;
-        groups[name] = [];
-        order.push(name);
-        try {
-          const c = await fetchJson("/api/sectors/components?sectorId=" + encodeURIComponent(s.sectorId));
-          for (const comp of c.components || []) {
-            const t = byName.get(comp.symbol);
-            if (t) { groups[name].push(t); placed.add(t.Name); }
-          }
-        } catch (e) {
-          groups[name]._err = e.message;
-        }
-      }
-    } catch (e) {
-      body.innerHTML = `<div class="wl-load">Sector data unavailable: ${escapeHtml(e.message)}</div>`;
-    }
-    order.push("Commodities");
-    groups.Other = tickers.filter(t =>
-      !placed.has(t.Name) && !groups.Indices.includes(t) && !groups.Commodities.includes(t));
-    order.push("Other");
-    wlGroups = { groups, order };
-    renderWatchlist();
-  }
-
-  function renderWatchlist() {
-    const body = $("wlBody");
-    if (!wlGroups) { body.innerHTML = `<div class="wl-load">Not built yet.</div>`; return; }
-    body.innerHTML = "";
-    for (const name of wlGroups.order) {
-      const items = wlGroups.groups[name];
-      if (!items || !items.length) continue;
-      const err = wlGroups.groups[name]._err;
-      const grp = document.createElement("div");
-      grp.className = "wl-group";
-      const head = document.createElement("button");
-      head.className = "wl-ghead";
-      head.innerHTML = `<span class="caret">▾</span><span class="nm">${escapeHtml(name)}</span>` +
-        (err ? `<span class="err" title="${escapeHtml(err)}">!</span>` : "") +
-        `<span class="cnt">${items.length}</span>`;
-      head.onclick = () => {
-        const c = grp.classList.toggle("collapsed");
-        head.querySelector(".caret").textContent = c ? "▸" : "▾";
-      };
-      const list = document.createElement("div");
-      list.className = "wl-list";
-      items.sort((a, b) => (a.disp || a.Name).localeCompare(b.disp || b.Name));
-      for (const t of items) {
-        const li = document.createElement("button");
-        li.className = "wl-item" + (ticker && t.Name === ticker.Name ? " sel" : "");
-        li.dataset.name = t.Name;
-        li.innerHTML = `<span class="code">${escapeHtml(t.Name)}</span><span class="desc">${escapeHtml(t.disp || "")}</span>`;
-        li.onclick = () => selectTicker(t);
-        list.appendChild(li);
-      }
-      grp.appendChild(head);
-      grp.appendChild(list);
-      body.appendChild(grp);
-    }
-    if (!body.children.length) body.innerHTML = `<div class="wl-load">No symbols available.</div>`;
+  function buildWatchlist() {
+    window.watchlists.setUniverse(tickers, dhanMap, selectTicker);
   }
 
   function toggleWL(open) {
     const openNow = open !== undefined ? open : !$("wlPane").classList.contains("open");
     $("wlPane").classList.toggle("open", openNow);
-    $("wlBackdrop").classList.toggle("hidden", !openNow);
-    if (openNow) {
-      if (!wlGroups) buildWatchlist();
-      else syncWlActive();
-    }
+    document.body.classList.toggle("watchlist-open", openNow);
+    $("wlToggle").setAttribute("aria-expanded", String(openNow));
+    if (openNow) buildWatchlist();
+    window.dispatchEvent(new Event("resize"));
   }
 
   async function load() {
@@ -2026,24 +1868,24 @@ renderSkewExps();
     const requestedName = ticker.Name;
     const btn = $("refreshBtn");
     btn.disabled = true;
-    const useDhan = source === "dhan" && dhanMap;
+    const useDhan = source === "dhan";
     try {
       const url = useDhan
-        ? "/api/dhan/chain?ticker=" + encodeURIComponent(requestedName)
+        ? "/api/live?ticker=" + encodeURIComponent(requestedName)
         : "/api/data?ticker=" + encodeURIComponent(requestedName);
       const data = await fetchJson(url);
       if (requestId !== liveRequest || !ticker || ticker.Name !== requestedName) return;
       state = data;
+      window.oiHeatmap.load(requestedName);
+      window.oiZCycle.load(requestedName);
       renderAll();
-      loadAnalytics();
-      $("updated").textContent = "Live · " + (useDhan ? "Dhan" : "AOC") + " · " + new Date().toLocaleTimeString();
-      banner("");
+      if (data.source !== "aoc") loadAnalytics();
+      else clearAnalytics();
+      $("updated").textContent = "Live · " + (data.source === "aoc" ? "AOC backup" : useDhan ? "Dhan" : "AOC") + " · " + new Date().toLocaleTimeString();
+      banner(data.fallback_reason ? "Using AOC backup. Dhan: " + data.fallback_reason : "");
     } catch (e) {
       if (requestId !== liveRequest || !ticker || ticker.Name !== requestedName) return;
-      const hint = useDhan
-        ? " (switch source to AOC in the top bar to keep going — Dhan JWT expired or symbol unmapped)"
-        : "";
-      banner("Failed to load live data: " + e.message + hint);
+      banner("Failed to load live data: " + e.message);
     } finally {
       if (requestId === liveRequest) btn.disabled = false;
     }
@@ -2064,6 +1906,8 @@ renderSkewExps();
       const data = await fetchJson(`/api/historical?ticker=${encodeURIComponent(requestedName)}&expiry=${encodeURIComponent(expiry)}&timestamp=${ts}`);
       if (requestId !== historicalRequest || !ticker || ticker.Name !== requestedName) return;
       state = data;
+      window.oiHeatmap.load(requestedName);
+      window.oiZCycle.load(requestedName);
       renderAll();
       $("updated").textContent = `Historical · ${expiry} · ${new Date(ts).toLocaleString()}`;
       banner("");
@@ -2077,7 +1921,9 @@ renderSkewExps();
 
   function startAuto() {
     clearInterval(timer);
-    timer = setInterval(load, REFRESH_MS);
+    timer = setInterval(() => {
+      if (!$("refreshBtn").disabled) load();
+    }, REFRESH_MS);
   }
 
   function stopAuto() {
@@ -2102,17 +1948,22 @@ renderSkewExps();
     $("modeLive").classList.toggle("active", next === "live");
     $("modeHist").classList.toggle("active", next === "hist");
     $("modeSectors").classList.toggle("active", next === "sectors");
+    $("modeScanners").classList.toggle("active", next === "scanners");
     const sectors = next === "sectors";
-    $("symbolCtrls").classList.toggle("hidden", sectors);
+    const scanners = next === "scanners";
+    $("symbolCtrls").classList.toggle("hidden", sectors || scanners);
     $("liveCtrls").classList.toggle("hidden", next !== "live");
     $("histCtrls").classList.toggle("hidden", next !== "hist");
-    $("chainPage").classList.toggle("hidden", sectors);
+    $("chainPage").classList.toggle("hidden", sectors || scanners);
     $("sectorPage").classList.toggle("hidden", !sectors);
+    $("scannerPage").classList.toggle("hidden", !scanners);
+    $("updated").classList.toggle("hidden", scanners);
     stopAuto();
     stopSectors();
     if (next === "live") { startAuto(); load(); }
     else if (next === "hist") { clearAnalytics(); populateExpiries(); ensureDefaultTime(); loadHistorical(); }
-    else { clearAnalytics(); loadSectors(); loadIntraday(); startSectors(); }
+    else if (sectors) { clearAnalytics(); loadSectors(); loadIntraday(); startSectors(); }
+    else { clearAnalytics(); }
   }
 
   async function populateExpiries() {
@@ -2183,13 +2034,15 @@ renderSkewExps();
     invalidateRequests();
     clearAnalytics();
     ticker = t;
+    window.oiHeatmap.load(t.Name);
+    window.oiZCycle.load(t.Name);
     const input = $("symbolSearch");
     input.value = (t.disp || t.Name);
     $("symbolList").classList.add("hidden");
     syncWlActive();
     if (isHistorical) {
       populateExpiries().then(() => { $("histTime").value = defaultTimeValue(); loadHistorical(); });
-    } else {
+    } else if (mode === "live") {
       load();
     }
   }
@@ -2235,10 +2088,32 @@ renderSkewExps();
       chainCount = +e.target.value;
       if (state) renderChain(state.metrics);
     });
+    $("chainSpreadMode").addEventListener("change", e => {
+      spreadMode = e.target.checked;
+      $("spreadWidthControl").classList.toggle("hidden", !spreadMode);
+      $("spreadUnitsControl").classList.toggle("hidden", !spreadMode);
+      $("chainCountLabel").textContent = spreadMode ? "Pairs" : "Strikes";
+      if (state) renderChain(state.metrics);
+    });
+    $("spreadWidth").addEventListener("change", e => {
+      spreadWidth = +e.target.value;
+      if (state) renderChain(state.metrics);
+    });
+    $("spreadRupees").addEventListener("change", e => {
+      spreadRupees = e.target.checked;
+      if (state) renderChain(state.metrics);
+    });
+    const spreadHelp = $("spreadHelpDialog");
+    $("spreadHelp").addEventListener("click", () => spreadHelp.showModal());
+    $("spreadHelpClose").addEventListener("click", () => spreadHelp.close());
+    spreadHelp.addEventListener("click", e => { if (e.target === spreadHelp) {
+      const rect = spreadHelp.getBoundingClientRect();
+      if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) spreadHelp.close();
+    }});
     $("wlToggle").addEventListener("click", () => toggleWL());
     $("wlClose").addEventListener("click", () => toggleWL(false));
     $("wlBackdrop").addEventListener("click", () => toggleWL(false));
-    $("wlRebuild").addEventListener("click", () => { wlGroups = null; buildWatchlist(); });
+    $("wlRebuild").addEventListener("click", () => { buildWatchlist(); window.watchlists.refresh(); });
     $("chartsToggle").addEventListener("click", () => {
       chartsVisible = !chartsVisible;
       $("chartsWrap").classList.toggle("collapsed", !chartsVisible);
@@ -2263,6 +2138,14 @@ renderSkewExps();
       if (skewVisible) renderAnalyticsCharts();
     });
     $("ivrReset").addEventListener("click", () => ivrChart.reset());
+    $("skewStrikes").addEventListener("change", () => {
+      const input = $("skewStrikes");
+      const value = Number(input.value);
+      const count = isFinite(value) ? Math.max(1, Math.min(80, Math.trunc(value))) : 8;
+      input.value = count;
+      skewChart.strikesPerSide = count;
+      skewChart.reset();
+    });
     $("skewReset").addEventListener("click", () => skewChart.reset());
     $("termMode").querySelectorAll("button").forEach(b => {
       b.addEventListener("click", () => {
@@ -2289,13 +2172,15 @@ renderSkewExps();
     $("modeLive").addEventListener("click", () => setMode("live"));
     $("modeHist").addEventListener("click", () => setMode("hist"));
     $("modeSectors").addEventListener("click", () => setMode("sectors"));
+    $("modeScanners").addEventListener("click", () => setMode("scanners"));
     initCombo();
     try {
       const [{ tickers: list }, runtime] = await Promise.all([
-        fetchJson("/api/tickers"),
+        fetchJson("/api/live/tickers"),
         fetchJson("/api/config").catch(() => ({ providers: {} })),
       ]);
       tickers = list;
+      buildWatchlist();
       const first = list.find(t => t.Name === "NIFTY") || list[0];
       try {
         const map = await fetchJson("/api/dhan/map");
@@ -2303,17 +2188,25 @@ renderSkewExps();
       } catch (e2) {
         dhanMap = null;
       }
-      source = runtime.providers && runtime.providers.dhan && dhanMap
-        ? "dhan"
-        : runtime.providers && runtime.providers.aoc
-          ? "aoc"
-          : dhanMap ? "dhan" : "aoc";
+      buildWatchlist();
+      source = "dhan";
       $("sourceSelect").value = source;
       selectTicker(first);
+      // Load lot metadata independently so Dhan startup and chains remain responsive.
+      fetchJson("/api/tickers").then(({tickers: metadata}) => {
+        const byName = new Map((metadata || []).map(t => [t.Name, t]));
+        tickers = tickers.map(t => ({...t, ...byName.get(t.Name)}));
+        if (ticker) ticker = tickers.find(t => t.Name === ticker.Name) || ticker;
+        if (state?.ticker) {
+          state.ticker = {...state.ticker, ...byName.get(state.ticker.Name)};
+          renderAll();
+        }
+        buildWatchlist();
+      }).catch(() => {});
     } catch (e) {
       banner("Could not load tickers: " + e.message);
     }
-    setMode("live");
+    setMode(mode);
   }
 
   init();

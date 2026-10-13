@@ -89,6 +89,63 @@ The browser API remains compatible with V1:
 
 Errors use HTTP `400`, `404`, `502`, `503`, or `504` as appropriate and return an `error` message plus a stable `code`.
 
+## IV scanners
+
+The Live dashboard includes a daily **ATM OI Z-score through the expiry cycle**
+chart below the OI expiry-cycle plot. Choose an expiry, 3M/6M/1Y baseline, and
+CE/PE visibility. Hover shows scores and baseline sample dates; wheel zooms dates,
+drag pans, and Reset view restores the cycle. Each archived close uses its own
+ATM and prior-expiry baseline; missing scores leave gaps. Reload archive reads
+saved data without provider requests or a rolling Z-score update. The option
+chain and both expiry-cycle charts have independent Collapse/Expand buttons.
+
+The **Scanners** tab also includes a **Highest OI closing scanner** using the local
+historical OI database. Choose bullish (highest put OI) or bearish (highest call OI).
+Enable price distance < X%, CE/PE maximum strike gap > Y available intervals,
+and second-highest / highest OI < Z% independently. Price distance uses the
+highest-OI strike as denominator. N defaults to 0 (latest close only) and applies
+only to the second OI filter; N > 0 requires it on each of N trading dates,
+including the latest close, for the same expiry. Missing history fails the filter.
+Results show the closing date, applied settings, exclusions and watchlist selection.
+Run scan applies edited controls; Collapse and Clear results work independently.
+Refresh closing data with Data update. Scanning makes no provider requests.
+
+The **Scanners** tab beside Sectors scans NSE stock rows from Dhan's IV movers
+(`HighestIVP`, one-year lookback, page 1, count 350). Index rows are excluded.
+Current IVP strictly above/below the selected cutoffs determines which stocks
+need history; stocks between the cutoffs never trigger history requests.
+The falling and rising conditions have separate toggles, enabled by default.
+Disable either condition to show all stocks passing that block's IVP cutoff,
+including those with insufficient history. That block makes no history requests
+and shows current IV/IVP only. Click Run scan to apply the selected toggles.
+
+Both historical ATM IV and IVP are smoothed with a trailing simple moving
+average (default 3 observations). The lookback (default 5 observations) compares
+the latest smoothed IV with the smoothed IV that many valid daily observations
+earlier. It measures net change, not a requirement that every day moves in the
+same direction. Dates and values remain aligned when sorting descending Dhan
+history; invalid dates, nonpositive IV, and invalid IVP are excluded. At least
+`lookback + smoothing` valid rows are required. High-IVP rows match negative IV
+change; low-IVP rows match positive IV change. Tables distinguish current values
+from smoothed history, show actual dates, and include absolute IV change in
+percentage points and relative percentage change.
+
+One background scan runs at a time per application process. History and movers
+requests share a lock and wait at least one second between upstream requests.
+History is cached for 15 minutes (shared with the IVP/IVR plot), and movers for
+5 minutes. HTTP 429 stops the scan and starts a cooldown of at least 60 seconds
+or the upstream Retry-After duration. Authentication failures stop the scan;
+other stock-specific failures are listed as skipped. Cancellation stops after
+the current request. Partial results and progress remain available, including
+after a browser reload; restarting the server clears scans and caches.
+
+- `POST /api/scanners/iv/start?high=80&low=20&days=5&smoothing=3&falling=true&rising=true`
+- `GET /api/scanners/iv/status?id=<scan-id>` (omit id for the latest scan)
+- `POST /api/scanners/iv/cancel?id=<scan-id>`
+
+Validation: `python -m unittest discover -s tests`; frontend regression checks:
+`node tests/test_ivr_chart.cjs`.
+
 ## EC2 deployment with Docker
 
 Install Docker and Docker Compose on the EC2 host, then:
@@ -140,6 +197,13 @@ sudo systemctl enable --now fno-analyzer
 Edit `/etc/fno-analyzer/fno-analyzer.env`, add the secrets, then run `sudo systemctl restart fno-analyzer`. Use the same Nginx virtual host to proxy to `127.0.0.1:8000`.
 
 ## Validation
+
+Historical ATM OI storage is available under **Scanners → Data update**. It
+archives daily front-expiry chains including per-strike Greeks in SQLite,
+resumes missing dates and skips completed snapshots. The first trailing-year
+backfill can take days at conservative pacing; keep the backend running.
+See [daily OI archive details](docs/oi-history.md) for scope, DTE conventions,
+configuration and provider limitations.
 
 ```bash
 python -m compileall -q run.py src tests

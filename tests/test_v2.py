@@ -174,7 +174,11 @@ class MapTests(unittest.TestCase):
 
 class ApplicationTests(unittest.TestCase):
     def test_health_does_not_require_provider_credentials(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
         settings = {
+            "data_path": directory.name,
+            "map_path": str(Path(directory.name) / "map.json"),
             "providers": {"aoc": {"base_url": "", "token": ""}, "dhan": {"jwt": ""}},
             "server": {"request_timeout_seconds": 30, "refresh_seconds": 15},
             "cache": {"chain_ttl_seconds": 6, "ticker_ttl_seconds": 0},

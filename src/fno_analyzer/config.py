@@ -17,7 +17,11 @@ DEFAULTS: dict[str, Any] = {
     },
     "providers": {
         "aoc": {
+            "api_mode": "legacy",
+            "v27_base_url": "https://v27.aoccalculator.in/api/v27",
             "base_url": "https://apim4.niftychain.in/api/v10",
+            "history_base_url": "https://api.niftychain.in/api/v10",
+            "request_interval_seconds": 2,
             "token": "",
             "token_env": "FNO_AOC_TOKEN",
         },
@@ -111,6 +115,9 @@ def load_settings(config_path: str | Path | None = None) -> dict[str, Any]:
 
     providers = settings["providers"]
     aoc = providers["aoc"]
+    aoc["api_mode"] = os.getenv("FNO_AOC_API_MODE", aoc.get("api_mode", "legacy"))
+    if aoc["api_mode"] not in ("legacy", "v27"):
+        raise ValueError("providers.aoc.api_mode must be legacy or v27")
     aoc["base_url"] = str(aoc.get("base_url", "")).rstrip("/")
     aoc["token"] = _env(aoc.get("token_env"), aoc.get("token", "")) or os.getenv("AOC_TOKEN", "")
     dhan = providers["dhan"]

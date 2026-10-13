@@ -1,4 +1,7 @@
 import time
+from threading import Lock
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from typing import Any
 
 import requests
@@ -33,7 +36,8 @@ def kv_to_dict(keys: list[str], values: list[Any]) -> dict[str, Any]:
 
 
 def parse_payload(payload: dict[str, Any]) -> dict[str, Any]:
-    data = payload.get("data") or {}
+    data = payload.get("data") if "data" in payload else payload
+    data = data or {}
     snapshot: dict[str, Any] = {}
     strikes: list[dict[str, Any]] = []
     snapshot_data = data.get("snapshot") or {}
@@ -57,14 +61,24 @@ class AocClient:
     def __init__(self, settings: dict[str, Any]):
         config = settings["providers"]["aoc"]
         self.base_url = str(config.get("base_url", "")).rstrip("/")
+        self.api_mode = str(config.get("api_mode", "legacy"))
+        self.v27_base_url = str(config.get("v27_base_url", "https://v27.aoccalculator.in/api/v27")).rstrip("/")
         self.token = str(config.get("token") or "")
         self.timeout = float(settings["server"].get("request_timeout_seconds", 30))
         self.cache_ttl = float(settings["cache"].get("ticker_ttl_seconds", 21600))
         self.session = requests.Session()
         if self.token:
             self.session.headers["Authorization"] = f"Bearer {self.token}"
+        if self.api_mode == "v27":
+            self.session.headers.update({"Accept": "application/json", "Origin": "https://aoccalculator.in",
+                                         "Referer": "https://aoccalculator.in/"})
         self._tickers: list[dict[str, Any]] | None = None
         self._tickers_at = 0.0
+        self._request_lock = Lock()
+        self._last_request = 0.0
+        self._cooldown_until = 0.0
+        self.request_interval = max(1.0, float(config.get("request_interval_seconds", 2)))
+        self.history_base_url = str(config.get("history_base_url", "https://api.niftychain.in/api/v10")).rstrip("/")
 
     @property
     def configured(self) -> bool:
@@ -74,12 +88,23 @@ class AocClient:
         return f"{self.base_url}/{ENDPOINTS[endpoint]}"
 
     def _get(self, endpoint: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+        with self._request_lock:
+            if time.monotonic() < self._cooldown_until:
+                raise ProviderError("AOC rate-limit cooldown is active", code="AOC_RATE_LIMIT", provider=self.name)
+            time.sleep(max(0, self.request_interval - (time.monotonic() - self._last_request)))
+            self._last_request = time.monotonic()
+            return self._request(endpoint, params)
+
+    def _request(self, endpoint: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         if not self.configured:
             raise ConfigurationError(
                 "AOC is not configured; set providers.aoc.token or FNO_AOC_TOKEN",
                 provider=self.name,
             )
-        url = self._url(endpoint)
+        url = (f"{self.v27_base_url}/{ENDPOINTS[endpoint]}"
+               if self.api_mode == "v27" and endpoint in ("tickers", "live", "expiries", "sectors", "sector_components") else
+               f"{self.history_base_url}/{ENDPOINTS[endpoint]}"
+               if endpoint in ("historical", "expiries") else self._url(endpoint))
         try:
             response = self.session.get(url, params=params, timeout=self.timeout)
         except requests.Timeout as exc:
@@ -90,12 +115,25 @@ class AocClient:
             raise ProviderAuthError(self.name, "AOC authentication failed; refresh the AOC token")
         if response.status_code == 404:
             raise UpstreamNotFound(self.name, "AOC resource was not found")
+        if response.status_code == 429:
+            retry = response.headers.get("Retry-After", "60")
+            try:
+                seconds = float(retry)
+            except (TypeError, ValueError):
+                try:
+                    seconds = (parsedate_to_datetime(retry) - datetime.now(timezone.utc)).total_seconds()
+                except (TypeError, ValueError, OverflowError):
+                    seconds = 60
+            self._cooldown_until = time.monotonic() + max(60, seconds)
+            raise ProviderError("AOC rate limit reached; update stopped", code="AOC_RATE_LIMIT", provider=self.name)
         if not 200 <= response.status_code < 300:
             raise ProviderError(f"AOC returned HTTP {response.status_code}", provider=self.name)
         try:
             payload = response.json()
         except ValueError as exc:
             raise ProviderError("AOC returned invalid JSON", provider=self.name) from exc
+        if isinstance(payload, list) and endpoint in ("tickers", "expiries"):
+            payload = {"data": payload}
         if not isinstance(payload, dict):
             raise ProviderError("AOC returned an invalid response", provider=self.name)
         status = payload.get("statusCode")
@@ -134,7 +172,8 @@ class AocClient:
         return self._get("historical", {"ticker": ticker, "expiry": expiry, "timestamp": int(timestamp_ms)})
 
     def fetch_sectors(self) -> dict[str, Any]:
-        return self._get("sectors")
+        payload = self._get("sectors")
+        return payload if "data" in payload else {"data": payload}
 
     def fetch_sector_intraday(self, start_ms: int, end_ms: int, interval: int) -> dict[str, Any]:
         return self._get(
@@ -144,7 +183,7 @@ class AocClient:
 
     def fetch_sector_components(self, sector_id: int) -> dict[str, Any]:
         payload = self._get("sector_components", {"sectorId": int(sector_id)})
-        data = payload.get("data") or {}
+        data = payload.get("data", payload) or {}
         if not isinstance(data, dict):
             return {"ts": None, "sectorId": int(sector_id), "components": []}
 

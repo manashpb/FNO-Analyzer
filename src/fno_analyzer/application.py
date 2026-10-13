@@ -1,4 +1,5 @@
 from datetime import datetime
+from pathlib import Path
 from threading import Lock
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -15,6 +16,11 @@ from .providers.dhan import (
     normalize_dhan_chain,
 )
 from .services.metrics import compute_metrics
+from .services.scanners import IVScanner
+from .services.oi_history import OIHistoryStore
+from .services.oi_downloader import OIHistoryUpdater
+from .services.oi_zscore import OIZScoreService
+from .services.oi_levels import OILevelsScanner
 from .services.symbol_map import build_symbol_map, load_map, lookup_map, save_map
 
 IST = ZoneInfo("Asia/Kolkata")
@@ -25,11 +31,20 @@ class Application:
         self.settings = settings
         self.aoc = AocClient(settings)
         self.dhan = DhanClient(settings)
+        self.iv_scanner = IVScanner(self.dhan)
+        self.oi_history = OIHistoryUpdater(self.aoc,
+            OIHistoryStore(Path(settings["data_path"]) / "oi_history.sqlite3"), settings["map_path"], self.dhan)
+        self.oi_zscore = OIZScoreService(self.oi_history.store)
+        self.oi_levels = OILevelsScanner(self.oi_history.store)
         self.chain_cache = TTLCache(settings["cache"].get("chain_ttl_seconds", 6))
         self.map_lock = Lock()
 
     def ticker_meta(self, name: str, fallback: str | None = None) -> dict[str, Any] | None:
         query = name.upper()
+        if fallback is not None:
+            return next((dict(t) for t in (self.aoc._tickers or [])
+                         if str(t.get("Name") or "").upper() == query),
+                        {"Name": query, "disp": fallback})
         try:
             for ticker in self.aoc.get_tickers():
                 if str(ticker.get("Name") or "").upper() == query:
@@ -48,6 +63,7 @@ class Application:
             "snapshot": data["snapshot"],
             "strikes": data["strikes"],
             "metrics": compute_metrics(data["snapshot"], data["strikes"]),
+            "oi_zscore": self.oi_zscore.live(ticker, data["snapshot"], data["strikes"]),
             "ticker": self.ticker_meta(ticker),
         }
 
@@ -69,8 +85,11 @@ class Application:
             "snapshot": chain["snapshot"],
             "strikes": chain["strikes"],
             "metrics": compute_metrics(chain["snapshot"], all_strikes),
+            "oi_zscore": self.oi_zscore.live(str(entry.get("aoc") or ""), chain["snapshot"], all_strikes),
             "coverage": chain.get("coverage", {}),
-            "ticker": self.ticker_meta(str(entry.get("aoc") or ""), entry.get("disp") or entry.get("aoc")),
+            "ticker": next((dict(t) for t in (self.aoc._tickers or [])
+                            if t.get("Name") == entry.get("aoc")),
+                           {"Name": entry.get("aoc"), "disp": entry.get("disp") or entry.get("aoc")}),
             "dhan": {
                 "sid": int(entry["sid"]),
                 "seg": int(entry["seg"]),
@@ -103,6 +122,50 @@ class Application:
         return start_ms, end_ms
 
     def dispatch(self, path: str, query: dict[str, list[str]]) -> tuple[dict[str, Any], int]:
+        if path == "/api/scanners/oi-levels/run":
+            def optional(name, default):
+                value = self._value(query, name, default)
+                return None if value == "off" else float(value)
+            return self.oi_levels.scan(
+                self._value(query, "direction", "bullish"),
+                optional("distance", "2"), optional("gap", "2"),
+                optional("second", "50"), int(self._value(query, "days", "0"))), 200
+        if path == "/api/scanners/oi-zscore/update":
+            with self.oi_history.lock:
+                if self.oi_history.state["status"] == "running":
+                    raise AppError("Finish or cancel Data update before updating Z-scores", code="ARCHIVE_BUSY", status=409)
+            return self.oi_zscore.start(), 200
+        if path == "/api/scanners/oi-zscore/status":
+            return self.oi_zscore.snapshot(), 200
+        if path == "/api/history/oi/zscore-cycle":
+            return self.oi_zscore.cycle(self._ticker(query), self._value(query, "expiry", "")), 200
+        if path == "/api/history/oi/start":
+            with self.oi_zscore.lock:
+                if self.oi_zscore.state['status'] == 'running':
+                    raise AppError("Finish the Z-score update before Data update", code="ZSCORE_BUSY", status=409)
+            return self.oi_history.start(), 200
+        if path == "/api/history/oi/heatmap":
+            return self.oi_history.store.heatmap(self._ticker(query), self._value(query, "expiry", "")), 200
+        if path == "/api/history/oi/status":
+            return self.oi_history.snapshot(), 200
+        if path == "/api/history/oi/cancel":
+            return self.oi_history.cancel(self._value(query, "id")), 200
+        if path == "/api/scanners/iv/start":
+            falling = self._value(query, "falling", "true").lower()
+            rising = self._value(query, "rising", "true").lower()
+            if falling not in ("true", "false") or rising not in ("true", "false"):
+                raise InvalidParameter("Falling and rising filters must be true or false")
+            return self.iv_scanner.start(
+                float(self._value(query, "high", "80")),
+                float(self._value(query, "low", "20")),
+                self._integer(query, "days", minimum=1),
+                self._integer(query, "smoothing", minimum=1),
+                falling == "true", rising == "true",
+            ), 200
+        if path == "/api/scanners/iv/status":
+            return self.iv_scanner.snapshot(self._value(query, "id", "")), 200
+        if path == "/api/scanners/iv/cancel":
+            return self.iv_scanner.cancel(self._value(query, "id")), 200
         if path == "/api/health":
             return {
                 "status": "ok",
@@ -125,6 +188,31 @@ class Application:
             }, 200
         if path == "/api/tickers":
             return {"tickers": self.aoc.get_tickers()}, 200
+        if path == "/api/live/tickers":
+            mapping = load_map(self.settings["map_path"]) or {}
+            tickers = [{"Name": row["aoc"], "disp": row.get("disp") or row["aoc"],
+                        "Fav": row["aoc"] in ("NIFTY", "SENSEX", "BANKNIFTY"), "userFav": True}
+                       for row in mapping.get("mapped", []) if row.get("aoc")]
+            if tickers:
+                return {"tickers": tickers}, 200
+            return {"tickers": self.aoc.get_tickers()}, 200
+        if path == "/api/live":
+            ticker = self._ticker(query)
+            try:
+                result = self._dhan_result(self._entry(ticker))
+                if not result.get("strikes"):
+                    raise ProviderError("Dhan returned an empty option chain", provider="dhan")
+                result["source"] = "dhan"
+            except AppError as dhan_error:
+                try:
+                    result = self._aoc_result(self.aoc.fetch_live(ticker), ticker)
+                    if not result.get("strikes"):
+                        raise ProviderError("AOC returned an empty option chain", provider="aoc")
+                    result["source"] = "aoc"
+                    result["fallback_reason"] = str(dhan_error)
+                except AppError as aoc_error:
+                    raise ProviderError(f"Dhan: {dhan_error}; AOC backup: {aoc_error}") from aoc_error
+            return result, 200
         if path == "/api/expiries":
             ticker = self._ticker(query)
             return {"expiries": self.aoc.get_expiries(ticker)}, 200
@@ -137,6 +225,7 @@ class Application:
             timestamp = self._integer(query, "timestamp", minimum=1)
             result = self._aoc_result(self.aoc.fetch_historical(ticker, expiry, timestamp), ticker)
             result["as_of"] = timestamp
+            result.pop("oi_zscore", None)
             return result, 200
         if path == "/api/dhan/map":
             refresh = self._value(query, "refresh", "").lower() in ("1", "true", "yes")

@@ -1,5 +1,6 @@
 import json
 import time
+from threading import Lock
 from datetime import datetime
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -7,6 +8,7 @@ from zoneinfo import ZoneInfo
 import requests
 
 from ..errors import ConfigurationError, ProviderAuthError, ProviderError, UpstreamNotFound, UpstreamTimeout
+from ..cache import TTLCache
 
 IST = ZoneInfo("Asia/Kolkata")
 EXPDATEJ_OFFSET = 315532800
@@ -232,6 +234,11 @@ class DhanClient:
         self.expiry_list_url = str(config.get("expiry_list_url", ""))
         self.option_chain_url = str(config.get("option_chain_url", ""))
         self.ivpivr_url = str(config.get("ivpivr_url", ""))
+        self.ivmovers_url = str(config.get("ivmovers_url") or self.ivpivr_url.rsplit("/", 1)[0] + "/ivmovers")
+        self.analytics_cache = TTLCache(900)
+        self.movers_cache = TTLCache(300)
+        self.analytics_lock = Lock()
+        self.analytics_next_request = 0.0
         self.jwt = str(config.get("jwt") or "")
         self.entity_id = str(config.get("entity_id") or "")
         self.client_id = str(config.get("client_id") or "")
@@ -277,6 +284,13 @@ class DhanClient:
             raise ProviderAuthError(self.name, "Dhan authentication failed; refresh the Dhan JWT")
         if response.status_code == 404:
             raise UpstreamNotFound(self.name, "Dhan resource was not found")
+        if response.status_code == 429:
+            try:
+                delay = max(60.0, float(response.headers.get("Retry-After", 60)))
+            except (TypeError, ValueError):
+                delay = 60.0
+            self.analytics_next_request = time.monotonic() + delay
+            raise ProviderError("Dhan rate limit reached; wait before running again", code="DHAN_RATE_LIMIT", provider=self.name)
         if not 200 <= response.status_code < 300:
             raise ProviderError(f"Dhan returned HTTP {response.status_code}", provider=self.name)
         try:
@@ -342,7 +356,39 @@ class DhanClient:
 
     def ivp_ivr(self, seg: int, sid: int, lookback: str = "1y") -> dict[str, Any]:
         analytics_seg = self.analytics_segments.get(str(seg), 1)
-        return self._post(
-            self.ivpivr_url,
-            {"data": {"SegID": int(analytics_seg), "SecID": int(sid), "lookback": lookback, "Range": "1Y"}},
-        )
+        return self.analytics_history(int(analytics_seg), sid, lookback)
+
+    def _analytics_post(self, url: str, body: dict[str, Any]) -> dict[str, Any]:
+        if time.monotonic() < self.analytics_next_request:
+            time.sleep(self.analytics_next_request - time.monotonic())
+        try:
+            result = self._post(url, body)
+        finally:
+            self.analytics_next_request = max(self.analytics_next_request, time.monotonic() + 1.0)
+        if result.get("code") not in (None, 0):
+            raise ProviderError(str(result.get("remarks") or "Dhan analytics request rejected")[:240], provider=self.name)
+        return result
+
+    def analytics_history(self, seg: int, sid: int, lookback: str = "1y") -> dict[str, Any]:
+        # Movers already supply analytics segment IDs; do not translate them again.
+        key = (int(seg), int(sid), lookback)
+        with self.analytics_lock:
+            cached = self.analytics_cache.get(key)
+            if cached is not None:
+                return cached
+            result = self._analytics_post(self.ivpivr_url, {"data": {
+                "SegID": int(seg), "SecID": int(sid), "lookback": lookback, "Range": "1Y",
+            }})
+            self.analytics_cache.set(key, result)
+            return result
+
+    def iv_movers(self) -> dict[str, Any]:
+        with self.analytics_lock:
+            cached = self.movers_cache.get("NSE")
+            if cached is not None:
+                return cached
+            result = self._analytics_post(self.ivmovers_url, {"data": {
+                "exch": "NSE", "page": 1, "count": 350, "lookback": "1y", "flag": "HighestIVP",
+            }})
+            self.movers_cache.set("NSE", result)
+            return result

@@ -25,7 +25,7 @@
     $("olResults").textContent = ""; $("olExcluded").textContent = "";
     $("olStatus").textContent = "Scanning archived closing chains…";
     try {
-      const response = await fetch('/api/scanners/oi-levels/run?' + params, {method: "POST"});
+      const response = await fetch('api/scanners/oi-levels/run?' + params, {method: "POST"});
       const state = await response.json();
       if (!response.ok) throw new Error(state.error || "OI scanner request failed; restart the backend if outdated");
       const side = state.settings.direction === "bullish" ? "PE" : "CE";

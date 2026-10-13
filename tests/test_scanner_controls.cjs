@@ -7,7 +7,7 @@ const state = overrides => ({id:'scan', status:'complete', high_cutoff:70, low_c
   days:5, smoothing:3, falling:true, rising:true, high:[], low:[], skipped:[],
   checked:0, candidates:0, total_stocks:0, ...overrides});
 
-function harness() {
+function harness(base='http://localhost/') {
   const elements = {};
   const get = id => elements[id] ||= {value:'', checked:true, disabled:false,
     listeners:{}, addEventListener(event, handler) {this.listeners[event] = handler;},
@@ -16,10 +16,11 @@ function harness() {
   get('scanDays').value = '5'; get('scanSmooth').value = '3';
   let resolveInitial;
   let reply = state({falling:false, rising:false});
-  let submitted;
+  let submitted;const requests=[];
   vm.runInNewContext(source, {
     document:{getElementById:get}, URLSearchParams, setTimeout:()=>1, clearTimeout:()=>{},
     fetch:(url, options) => {
+      url=new URL(url,base).href;requests.push({url,method:options.method});
       if (options.method === 'POST') {
         submitted = url;
         return Promise.resolve({ok:true, json:async()=>reply});
@@ -29,7 +30,7 @@ function harness() {
   });
   return {get, resolveInitial:body=>resolveInitial(body), setReply:body=>{reply=body;},
     submit:()=>get('scannerForm').listeners.submit({preventDefault(){}}),
-    submitted:()=>submitted};
+    submitted:()=>submitted,requests};
 }
 
 (async () => {
@@ -60,5 +61,11 @@ function harness() {
   assert.match(current.submitted(), /falling=false&rising=false/);
   assert.equal(current.get('scanFalling').checked, false);
   assert.match(current.get('scanHighTitle').textContent, /High IVP > 70 · IVP only/);
+  const prefixed=harness('http://localhost/fnoanalyzer/');
+  assert.equal(prefixed.requests[0].url,'http://localhost/fnoanalyzer/api/scanners/iv/status');
+  prefixed.resolveInitial({status:'idle'});await flush();await prefixed.submit();
+  assert.equal(new URL(prefixed.submitted()).pathname,'/fnoanalyzer/api/scanners/iv/start');
+  assert.equal(prefixed.requests[1].method,'POST');
+  assert.equal(new URL(current.submitted()).pathname,'/api/scanners/iv/start');
   console.log('Scanner controls: late responses, old backend, and disabled direction filters passed');
 })().catch(error => {console.error(error); process.exitCode=1;});

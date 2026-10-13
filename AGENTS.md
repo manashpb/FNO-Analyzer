@@ -403,6 +403,14 @@ IVP-only check returned 42 high matches and 17 low matches at cutoffs 70/30.
 These counts and market values are historical verification examples, not fixed
 expected outputs or recommendations.
 
+Frontend assets and API requests use page-relative URLs, supporting both `/`
+and `/fnoanalyzer/` with Nginx stripping the prefix. Always redirect the bare
+prefix to its trailing-slash URL. `FNO_PUBLIC_BASE_URL` remains informational;
+it does not configure routing. See `docs/ec2-subpath.md` for installation on the
+existing trading-journal Nginx host, using loopback port 8001 and a separate
+secret-free config. The subpath Nginx snippet must be included inside the existing
+server block, not installed as a standalone conf.d server.
+
 Docker uses Python 3.12 and publishes port 8000 on loopback with persistent
 `fno-data`; Nginx and systemd examples are in `deploy/`. See `README.md` for
 deployment commands and environment setup.

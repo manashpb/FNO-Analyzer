@@ -66,7 +66,7 @@ function scan(root,count){root.replaceChildren();const table=new Node('table'),h
   assert(pending.get('wlBody').querySelectorAll('.wl-item').length===4);
   release({ok:true,json:async()=>({sectors:[]})});await flush();assert(pending.storage.has('fno-watchlist-sectors-v1'));
   let requests=0;
-  const fresh=harness(new Map(),async url=>{requests++;return {ok:true,json:async()=>url==='/api/sectors' ? {sectors:[{sectorId:2,displaySymbol:'IT'}]} : {components:[{symbol:'TCS'}]}};});
+  const fresh=harness(new Map(),async url=>{requests++;return {ok:true,json:async()=>url==='api/sectors' ? {sectors:[{sectorId:2,displaySymbol:'IT'}]} : {components:[{symbol:'TCS'}]}};});
   fresh.api.setUniverse(universe,{mapped:[{aoc:'NIFTY',seg:0}]},()=>{});await flush();
   assert.equal(requests,2);assert(JSON.parse(fresh.storage.get('fno-watchlist-sectors-v1')).groups.some(g=>g.name==='IT'&&g.symbols.includes('TCS')));
   fresh.api.setUniverse(universe,null,()=>{});assert.equal(requests,2);

@@ -11,9 +11,9 @@
     sectorAttempted=true;sectorLoading=true;sectorNote='Loading sector groups in background';if(selected==='sectors')render();
     async function request(url){const response=await fetch(url);const data=await response.json();if(!response.ok)throw Error(typeof data.error==='string' ? data.error : data.error?.message || 'Sector data unavailable');return data;}
     try {
-      const result=await request('/api/sectors');const pending=[];
+      const result=await request('api/sectors');const pending=[];
       for(const [i,sector] of (result.sectors || []).entries()) {
-        const data=await request('/api/sectors/components?sectorId='+encodeURIComponent(sector.sectorId));
+        const data=await request('api/sectors/components?sectorId='+encodeURIComponent(sector.sectorId));
         pending.push({name:sector.displaySymbol || sector.symbol,symbols:(data.components || []).map(c=>c.symbol)});
         sectorNote=`Loading sectors ${i+1}/${result.sectors.length}`;
         if(!sectorLoaded)sectors=[...pending];if(selected==='sectors')render();

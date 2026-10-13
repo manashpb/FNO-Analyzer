@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FNO Analyzer</title>
-<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="static/style.css">
 </head>
 <body>
 <header class="topbar">
@@ -343,12 +343,12 @@
   <details class="panel scanner-panel" id="scanSkipped" hidden><summary id="scanSkippedTitle">Skipped stocks</summary><button id="scanSkippedClear" type="button">Clear results</button><ul id="scanSkippedList"></ul></details>
 </div>
 
-<script src="/static/watchlists.js"></script>
-<script src="/static/scanner-panels.js"></script>
-<script src="/static/scanners.js"></script>
-<script src="/static/oi-history.js"></script>
-<script src="/static/oi-zscore.js"></script>
-<script src="/static/oi-levels.js"></script>
+<script src="static/watchlists.js"></script>
+<script src="static/scanner-panels.js"></script>
+<script src="static/scanners.js"></script>
+<script src="static/oi-history.js"></script>
+<script src="static/oi-zscore.js"></script>
+<script src="static/oi-levels.js"></script>
 <dialog id="spreadHelpDialog" class="spread-help" aria-labelledby="spreadHelpTitle">
   <div class="spread-help-head"><h2 id="spreadHelpTitle">Understanding Vertical Spreads</h2><button id="spreadHelpClose" type="button" autofocus aria-label="Close spread help">Close ×</button></div>
   <p>Spread mode compares call and put structures for the same symbol, expiry and two strikes. “Better” means more favorable quoted pricing for equivalent expiry exposure, not a prediction of market direction.</p>
@@ -378,11 +378,11 @@
   <p>Bid, Ask and Opp always show per-unit points. Enable “Interpretation in ₹ / lot” to multiply the interpretation advantage by the selected symbol’s lot size. For example, 3 points with a lot size of 50 is ₹150 per lot. If lot size is unavailable, the interpretation keeps points and explains why. Comparisons use the loaded snapshot’s bid/ask quotes, before fees, taxes, slippage, financing and margin costs. Both legs need sufficient quote quantity; displayed prices do not guarantee a combined fill.</p>
   <p>Opp uses undiscounted width. Precise put–call parity uses discounted width, so interest and time to expiry can affect the comparison. Missing, zero/nonpositive or crossed leg quotes show — and are not replaced with LTP. Negative synthetic spread quotes can result from wide leg markets. Treat stale or unusual quotes cautiously; a displayed advantage is not proof of arbitrage.</p>
 </dialog>
-<script src="/static/spreads.js"></script>
-<script src="/static/profile-charts.js"></script>
-<script src="/static/oi-heatmap.js"></script>
-<script src="/static/oi-zcycle.js"></script>
-<script src="/static/chain-panels.js"></script>
-<script src="/static/app.js"></script>
+<script src="static/spreads.js"></script>
+<script src="static/profile-charts.js"></script>
+<script src="static/oi-heatmap.js"></script>
+<script src="static/oi-zcycle.js"></script>
+<script src="static/chain-panels.js"></script>
+<script src="static/app.js"></script>
 </body>
 </html>

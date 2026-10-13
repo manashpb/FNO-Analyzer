@@ -174,7 +174,7 @@
     const changed=name!==symbol;symbol=name;if(changed)selected='';const id=++ticket;
     data=null;view=null;loading=true;message='Loading archived closing OI…';tip.classList.add('hidden');status.textContent=message;draw();
     try {
-      const response=await fetch('/api/history/oi/heatmap?'+new URLSearchParams({ticker:name,expiry:selected}));
+      const response=await fetch('api/history/oi/heatmap?'+new URLSearchParams({ticker:name,expiry:selected}));
       const result=await response.json();if(id!==ticket)return;if(!response.ok)throw Error(typeof result.error === 'string' ? result.error : result.error?.message || result.message || 'Archive request failed');
       data=result;message='';selected=data.expiry;expiry.replaceChildren(...data.expiries.map(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;o.selected=v===selected;return o;}));
       status.textContent=data.reason || `${name} · ${data.previous_expiry} to ${data.expiry} · ${data.days.length}/${data.dates.length} dates archived. Blank cells mean missing data; dates without trading evidence are omitted. OI in lots · ticker lot size used when historical lot size is absent.`;

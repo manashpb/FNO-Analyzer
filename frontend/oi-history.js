@@ -45,7 +45,7 @@
     clearTimeout(timer);
     const version = generation;
     try {
-      const next = await request("/api/history/oi/status");
+      const next = await request("api/history/oi/status");
       if (version !== generation) return;
       render(next);
     } catch (error) {
@@ -70,9 +70,9 @@
       if (state?.status === "running") timer = setTimeout(poll, 2000);
     }
   }
-  $("oiUpdate").addEventListener("click", () => action("/api/history/oi/start"));
+  $("oiUpdate").addEventListener("click", () => action("api/history/oi/start"));
   $("oiCancel").addEventListener("click", () => {
-    if (state?.id) action("/api/history/oi/cancel?id=" + encodeURIComponent(state.id));
+    if (state?.id) action("api/history/oi/cancel?id=" + encodeURIComponent(state.id));
   });
   poll();
 })();

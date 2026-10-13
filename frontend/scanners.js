@@ -63,7 +63,7 @@
 
   async function poll() {
     try {
-      const state = await request("/api/scanners/iv/status?id=" + encodeURIComponent(scan.id));
+      const state = await request("api/scanners/iv/status?id=" + encodeURIComponent(scan.id));
       render(state);
       if (state.status === "running") timer = setTimeout(poll, 1500);
     } catch (error) {
@@ -92,7 +92,7 @@
     $("scanRun").disabled = true;
     $("scanStatus").textContent = "Starting scan…";
     try {
-      const state = await request("/api/scanners/iv/start?" + params, "POST");
+      const state = await request("api/scanners/iv/start?" + params, "POST");
       if (!supportsDirectionFilters(state) || state.falling !== $("scanFalling").checked || state.rising !== $("scanRising").checked) {
         throw new Error("The running server did not apply your direction filters. Restart the application to load the updated backend, then run the scan again.");
       }
@@ -108,7 +108,7 @@
     if (!scan) return;
     $("scanCancel").disabled = true;
     try {
-      await request("/api/scanners/iv/cancel?id=" + encodeURIComponent(scan.id), "POST");
+      await request("api/scanners/iv/cancel?id=" + encodeURIComponent(scan.id), "POST");
       $("scanStatus").textContent = "Cancelling after the current history request…";
     } catch (error) {
       $("scanStatus").textContent = error.message;
@@ -116,7 +116,7 @@
     }
   });
   // Resume the server's last scan after a reload, without starting more requests.
-  request("/api/scanners/iv/status").then(state => {
+  request("api/scanners/iv/status").then(state => {
     if (state.status !== "idle" && !scan && !$("scanRun").disabled) {
       if (!supportsDirectionFilters(state)) {
         $("scanStatus").textContent = "The running server uses an older scanner. Restart the application before scanning; your filter selections have been kept.";

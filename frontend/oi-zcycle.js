@@ -82,7 +82,7 @@
     $('zCycleStatus').textContent='Loading archived Z-scores…';draw();
     try {
       const params=new URLSearchParams({ticker:symbol}); if (requested) params.set('expiry',requested);
-      const response=await fetch('/api/history/oi/zscore-cycle?'+params);
+      const response=await fetch('api/history/oi/zscore-cycle?'+params);
       const body=await response.json();
       if (current!==ticket) return;
       if (!response.ok) throw new Error(body.error || 'Z-score cycle request failed');

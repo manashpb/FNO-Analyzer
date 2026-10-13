@@ -176,6 +176,10 @@ sudo systemctl reload nginx
 
 For HTTPS, point the DNS record at the EC2 public IP, install Certbot, obtain a certificate, and use `deploy/nginx/fno-analyzer-tls.conf` with the real hostname and certificate paths. Put authentication at Nginx or an identity-aware proxy before exposing the dashboard publicly.
 
+For deployment beside an existing app at `/fnoanalyzer/`, see
+[the EC2 subpath guide](docs/ec2-subpath.md). It includes the configuration for
+the trading-journal server, systemd on loopback port 8001 and separate credentials.
+
 ## EC2 deployment with systemd
 
 Create an unprivileged `fno` user, copy V2 to `/opt/fno-analyzer`, and create a virtual environment:

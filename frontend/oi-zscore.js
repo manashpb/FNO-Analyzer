@@ -18,7 +18,7 @@
     return values !== null && values[0] >= applied.threshold && values[1] <= applied.opposite;
   }
   async function request(method = "GET") {
-    const response = await fetch('/api/scanners/oi-zscore/' + (method === "POST" ? "update" : "status"), {method});
+    const response = await fetch('api/scanners/oi-zscore/' + (method === "POST" ? "update" : "status"), {method});
     const body = await response.json();
     if (!response.ok) throw new Error(body.error || "Z-score request failed; restart the backend if outdated");
     return body;

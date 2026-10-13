@@ -1339,7 +1339,7 @@ renderSkewExps();
 
   async function fetchTermExp(j) {
     try {
-      const t = await fetchJson("/api/dhan/term?ticker=" + encodeURIComponent(ticker.Name) + "&exp=" + j);
+      const t = await fetchJson("api/dhan/term?ticker=" + encodeURIComponent(ticker.Name) + "&exp=" + j);
       (t.data || []).forEach(e => termCache.set(e.expdatej, e));
       rebuildTermData();
       renderTermExps();
@@ -1403,10 +1403,10 @@ renderSkewExps();
     const requestedName = ticker.Name;
     const isTerm = requestedName === "NIFTY" || requestedName === "SENSEX";
     const name = encodeURIComponent(requestedName);
-    const qIvr = "/api/dhan/ivpivr?ticker=" + name + "&lookback=" + encodeURIComponent(ivrLookback);
-    const qSk = "/api/dhan/skew?ticker=" + name;
+    const qIvr = "api/dhan/ivpivr?ticker=" + name + "&lookback=" + encodeURIComponent(ivrLookback);
+    const qSk = "api/dhan/skew?ticker=" + name;
     const qTerm = isTerm
-      ? "/api/dhan/term?ticker=" + name + (termTouched && termSel.size
+      ? "api/dhan/term?ticker=" + name + (termTouched && termSel.size
           ? "&exp=" + [...termSel].join("&exp=")
           : "&exps=3")
       : null;
@@ -1508,7 +1508,7 @@ renderSkewExps();
 
   async function loadSectorComponents(sectorId, body) {
     try {
-      const d = await fetchJson("/api/sectors/components?sectorId=" + encodeURIComponent(sectorId));
+      const d = await fetchJson("api/sectors/components?sectorId=" + encodeURIComponent(sectorId));
       componentsCache.set(sectorId, d);
       renderSectorComponentBody(d, body);
     } catch (e) {
@@ -1578,7 +1578,7 @@ renderSkewExps();
 
   async function loadSectors() {
     try {
-      const d = await fetchJson("/api/sectors");
+      const d = await fetchJson("api/sectors");
       sectorState = d;
       renderSectorSummary(d.sectors);
       renderSectorComponents(d.sectors);
@@ -1606,7 +1606,7 @@ renderSkewExps();
 
   async function loadIntraday() {
     try {
-      const d = await fetchJson("/api/sectors/intraday");
+      const d = await fetchJson("api/sectors/intraday");
       intradayState = d;
       idChart.setData(d.ts, d.series);
       buildIdLegend();
@@ -1871,8 +1871,8 @@ renderSkewExps();
     const useDhan = source === "dhan";
     try {
       const url = useDhan
-        ? "/api/live?ticker=" + encodeURIComponent(requestedName)
-        : "/api/data?ticker=" + encodeURIComponent(requestedName);
+        ? "api/live?ticker=" + encodeURIComponent(requestedName)
+        : "api/data?ticker=" + encodeURIComponent(requestedName);
       const data = await fetchJson(url);
       if (requestId !== liveRequest || !ticker || ticker.Name !== requestedName) return;
       state = data;
@@ -1903,7 +1903,7 @@ renderSkewExps();
     const btn = $("histLoadBtn");
     btn.disabled = true;
     try {
-      const data = await fetchJson(`/api/historical?ticker=${encodeURIComponent(requestedName)}&expiry=${encodeURIComponent(expiry)}&timestamp=${ts}`);
+      const data = await fetchJson(`api/historical?ticker=${encodeURIComponent(requestedName)}&expiry=${encodeURIComponent(expiry)}&timestamp=${ts}`);
       if (requestId !== historicalRequest || !ticker || ticker.Name !== requestedName) return;
       state = data;
       window.oiHeatmap.load(requestedName);
@@ -1971,7 +1971,7 @@ renderSkewExps();
     const sel = $("expirySelect");
     sel.innerHTML = "";
     try {
-      const { expiries } = await fetchJson("/api/expiries?ticker=" + encodeURIComponent(ticker.Name));
+      const { expiries } = await fetchJson("api/expiries?ticker=" + encodeURIComponent(ticker.Name));
       for (const e of expiries) {
         const opt = document.createElement("option");
         opt.value = e; opt.textContent = e;
@@ -2176,14 +2176,14 @@ renderSkewExps();
     initCombo();
     try {
       const [{ tickers: list }, runtime] = await Promise.all([
-        fetchJson("/api/live/tickers"),
-        fetchJson("/api/config").catch(() => ({ providers: {} })),
+        fetchJson("api/live/tickers"),
+        fetchJson("api/config").catch(() => ({ providers: {} })),
       ]);
       tickers = list;
       buildWatchlist();
       const first = list.find(t => t.Name === "NIFTY") || list[0];
       try {
-        const map = await fetchJson("/api/dhan/map");
+        const map = await fetchJson("api/dhan/map");
         dhanMap = map && Array.isArray(map.mapped) && map.mapped.length ? map : null;
       } catch (e2) {
         dhanMap = null;
@@ -2193,7 +2193,7 @@ renderSkewExps();
       $("sourceSelect").value = source;
       selectTicker(first);
       // Load lot metadata independently so Dhan startup and chains remain responsive.
-      fetchJson("/api/tickers").then(({tickers: metadata}) => {
+      fetchJson("api/tickers").then(({tickers: metadata}) => {
         const byName = new Map((metadata || []).map(t => [t.Name, t]));
         tickers = tickers.map(t => ({...t, ...byName.get(t.Name)}));
         if (ticker) ticker = tickers.find(t => t.Name === ticker.Name) || ticker;

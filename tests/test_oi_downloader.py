@@ -81,6 +81,37 @@ class UpdaterTests(unittest.TestCase):
         self.assertEqual(self.store.status()["chains"], 1)
         self.assertIsNone(self.store.session_dte("2026-10-01", "2026-10-06"))
 
+    def test_current_day_cutoff_and_closing_snapshot(self):
+        self.plan_patch.stop()
+        plan = self.store.iter_candidate_days
+        for hour, minute, second, expected_end, expected_saved in (
+            (15, 59, 59, "2026-10-05", 0),
+            (16, 0, 0, "2026-10-06", 1),
+            (18, 0, 0, "2026-10-06", 0),
+        ):
+            with self.subTest(hour=hour, minute=minute, second=second):
+                observed_now = datetime(2026, 10, 6, hour, minute, second, tzinfo=IST)
+
+                class CutoffClock(datetime):
+                    @classmethod
+                    def now(cls, tz=None):
+                        return observed_now.astimezone(tz)
+
+                with patch("fno_analyzer.services.oi_downloader.Thread"), \
+                     patch("fno_analyzer.services.oi_downloader.datetime", CutoffClock), \
+                     patch.object(self.store, "iter_candidate_days", side_effect=lambda start, end: plan("2026-10-06", end) if end >= "2026-10-06" else []):
+                    self.updater.start()
+                    self.updater._run()
+                state = self.updater.snapshot()
+                self.assertEqual(state["status"], "complete")
+                self.assertEqual(state["end"], expected_end)
+                self.assertEqual(state["saved"], expected_saved)
+        fetches = [call for call in self.aoc.calls if call[0] == "TEST"]
+        self.assertEqual(len(fetches), 1)
+        self.assertEqual(datetime.fromtimestamp(fetches[0][2] / 1000, IST),
+                         datetime(2026, 10, 6, 16, tzinfo=IST))
+        self.assertEqual(self.store.status()["chains"], 1)
+
     def test_rate_limit_stops_and_leaves_retryable_gap(self):
         self.aoc.failure = ProviderError("Private provider text", code="AOC_RATE_LIMIT")
         state = self.run_update()

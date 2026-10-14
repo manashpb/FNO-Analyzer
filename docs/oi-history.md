@@ -91,7 +91,10 @@ a list; the worker uses `iter_candidate_days()` directly. A date-first chain
 index supports existing-data checks.
 
 Discovery finishes before chain downloads begin. Updates use a trailing calendar
-year through yesterday in IST. Snapshot requests use 16:00 IST; accepted snapshots
+year through yesterday before 16:00 IST, or through today at or after 16:00 IST.
+Non-trading dates still require calendar exclusion or provider evidence; stale
+previous-day snapshots are never saved as today's data.
+Snapshot requests use 16:00 IST; accepted snapshots
 must be between 15:25 and 16:00, with matching symbol, expiry, source date and
 timestamp. Earlier intraday snapshots are retryable validation errors, not daily
 closing data. Exceptional sessions with different hours currently need explicit

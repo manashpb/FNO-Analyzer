@@ -114,8 +114,10 @@ class OIHistoryUpdater:
             self.store.invalidate_status()
 
     def _download(self):
-        today = datetime.now(IST).date()
-        end = today - timedelta(days=1)  # never archive an incomplete current session
+        now = datetime.now(IST)
+        today = now.date()
+        # The closing snapshot request is safe once its 16:00 IST cutoff has passed.
+        end = today if now.time() >= time(16) else today - timedelta(days=1)
         try:
             start = today.replace(year=today.year - 1)
         except ValueError:

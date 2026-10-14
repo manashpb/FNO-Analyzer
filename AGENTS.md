@@ -324,7 +324,8 @@ progress remains current. `scripts/compact_oi_history.py` is an offline backup,
 full preservation verification and VACUUM tool; compaction never runs automatically.
 Updates fetch historical expiries once using RELIANCE and reuse the shared stock
 expiry list for every stock, then archive the front expiry per date
-for a trailing calendar year through yesterday, filling gaps and skipping saved
+for a trailing calendar year through yesterday before 16:00 IST, or through today
+at or after 16:00 IST, filling gaps and skipping saved
 dates. Current stock membership uses the existing map and targeted Dhan searches
 for new names; do not regenerate the entire map. Historical absence stays missing.
 Requests use 16:00 IST and only accept matching source dates/timestamps in the

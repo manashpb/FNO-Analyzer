@@ -154,19 +154,108 @@ the watchlist export selects the string for manual Ctrl+C in that case.
 
 ## 5. Updates and rollback
 
-For later updates (when the checkout is clean):
+The steps below use branch `main`, remote checkout `/opt/fno-analyzer`, systemd
+service `fno-analyzer`, and loopback port 8001 from this guide.
 
-```bash
-sudo git -C /opt/fno-analyzer pull --ff-only origin main
-sudo /opt/fno-analyzer/.venv/bin/pip install -r /opt/fno-analyzer/requirements.txt
-sudo systemctl restart fno-analyzer
+### Publish from Windows
+
+Review the working tree and stage only the intended files. For the change that
+allows current-day closing archive updates at or after 16:00 IST:
+
+```powershell
+cd E:\TRADING\FNO_ANALYSIS\FNO-Analyzer
+
+git status --short
+git add AGENTS.md docs/oi-history.md docs/ec2-subpath.md src/fno_analyzer/services/oi_downloader.py tests/test_oi_downloader.py
+git diff --cached --stat
+git diff --cached --check
+git commit -m "Allow current-day closing archive updates after 4 PM IST"
+git push origin HEAD:main
 ```
 
-Reload the browser after frontend changes. Secrets and persistent data are outside
-the checkout. To remove the Nginx integration using the saved original configuration:
+If the code change is already committed, stage and commit only the remaining
+intended changes, then push. For future updates, adjust the staged file list and
+commit message. Review any previously staged files before committing. Avoid
+`git add .`: local `config.json` and environment files can contain credentials.
+Never commit provider tokens, JWTs or account IDs.
+
+### Pull on the remote machine
+
+Connect to the server using your existing SSH command. Wait for any running
+archive update or scanner job to finish before restarting; their workers stop
+when the application restarts. Saved archive data persists.
+
+```bash
+cd /opt/fno-analyzer
+sudo git status --short
+sudo git pull --ff-only origin main
+```
+
+Proceed with the pull only when the checkout is clean. If it reports local
+changes or diverging branches, resolve them before continuing; do not force-reset
+the checkout. Secrets and persistent data are outside this checkout.
+
+If the update changes `requirements.txt`, install the updated dependencies:
+
+```bash
+sudo /opt/fno-analyzer/.venv/bin/pip install -r /opt/fno-analyzer/requirements.txt
+```
+
+### Restart and verify FNO Analyzer
+
+Backend modules are loaded once, so restart the actual systemd service after
+Python changes. No machine reboot is required.
+
+```bash
+sudo systemctl restart fno-analyzer
+sudo systemctl status fno-analyzer --no-pager
+curl -f http://127.0.0.1:8001/api/health
+curl -f http://127.0.0.1:8001/api/ready
+curl -f http://127.0.0.1/fnoanalyzer/api/health
+```
+
+The first two requests check the backend directly; the last checks the Nginx
+route. If startup or a health check fails, inspect the service logs:
+
+```bash
+sudo journalctl -u fno-analyzer -n 80 --no-pager
+```
+
+Inspect logs locally and redact sensitive material before sharing them.
+
+### Nginx and browser
+
+Application code updates do not require a Nginx restart or reload. If you also
+changed the installed Nginx configuration, validate it and reload:
+
+```bash
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+Refresh the dashboard (Ctrl+F5 if frontend assets are stale). For the current-day
+archive change, click **Data update** at or after **4 PM IST**. The update includes
+today when AOC supplies a valid closing snapshot with a matching source date;
+before 4 PM it ends at yesterday. Stale previous-day snapshots are rejected.
+
+### Remove the integration
+
+To remove the Nginx integration using the saved original configuration:
 
 ```bash
 sudo cp /etc/nginx/trading-journal.conf.before-fno /etc/nginx/conf.d/trading-journal.conf
 sudo nginx -t && sudo systemctl reload nginx
 sudo systemctl stop fno-analyzer
+```
+
+## 6. Update token
+```bash
+sudo fresh /etc/fno-analyzer/fno-analyzer.env
+```
+Update these lines with your new values:
+FNO_DHAN_JWT=your_new_jwt
+FNO_AOC_TOKEN=your_new_aoc_token
+
+```bash
+sudo systemctl restart fno-analyzer
+sudo systemctl status fno-analyzer --no-pager
 ```

@@ -37,6 +37,52 @@ FNO_ANALYZER_V2/
 └── requirements.txt
 ```
 
+## Dashboard tabs
+
+The dashboard has **Live**, **Historical**, **Sectors**, **Scanners**, and
+**Option Fair Price** tabs. Option Fair Price appears immediately after Scanners.
+
+## Option Fair Price
+
+Select a symbol and Dhan expiry, then use the **Call (CE)** box on the left and
+**Put (PE)** box on the right. They stack on narrow screens. Both use the existing
+Dhan credentials from the Analyzer configuration; no separate setup or external
+calculator directory is required.
+
+Each box has independent controls:
+
+- **Strike price:** defaults to ATM. The shared **Strikes each side of ATM** input
+  defaults to **8 above and 8 below, plus ATM** (17 strikes when available), with
+  a range of 1–80 per side. Changing it updates both dropdowns immediately without
+  fetching another chain. A selected strike outside the new window resets to ATM.
+- **Buy / Sell:** green for Buy and red for Sell.
+- **Entry spot:** the underlying level at which you want to enter.
+- **Stop-loss distance:** underlying spot points from entry; defaults to **25**.
+- **Target distance:** underlying spot points from entry; defaults to **50**.
+
+The results show the spot level and estimated option premium at **Entry**,
+**Stop-loss**, and **Target**. Buy calls and sell puts place SL below entry and
+target above; sell calls and buy puts reverse those levels. Delta, Gamma and
+Theta are always visible beneath each box.
+
+Pricing preserves the original Option Fair Price calculator's method:
+
+```text
+spot move = scenario spot − current spot
+estimated premium = max(0, LTP + Delta × spot move
+                           + 0.5 × Gamma × spot move² + Theta / 7)
+```
+
+Premiums are in points per unit, before costs, using fixed Greeks from the loaded
+quote. Missing or invalid LTP/Greeks leave estimates unavailable. Expired contracts
+use intrinsic value. Expand **How prices are estimated** for the calculation and
+level-direction notes.
+
+**Refresh** loads quotes manually. **Auto refresh (10s)** runs while the tab is
+active, with a 60-second delay after errors. **Last refreshed** shows the cached
+quote acquisition time in IST. Entry levels and positions survive quote refresh;
+changing the symbol resets entry spots to the newly loaded spot.
+
 ## Configuration
 
 `config.json` is the only application configuration file. It contains both AOC and Dhan settings, with secrets blank by design. Do not put the V1 token or JWT into source control.
@@ -86,8 +132,24 @@ The browser API remains compatible with V1:
 - `/api/tickers`, `/api/expiries`, `/api/data`, `/api/historical`
 - `/api/dhan/map`, `/api/dhan/chain`, `/api/dhan/ivpivr`, `/api/dhan/skew`, `/api/dhan/term`
 - `/api/sectors`, `/api/sectors/intraday`, `/api/sectors/components`
+- `GET /api/fair-price/expiries?ticker=NIFTY`
+- `GET /api/fair-price/chain?ticker=NIFTY&expiry=<raw-expdatej>`
+- `POST /api/scanners/oi-zscore/update`, `GET /api/scanners/oi-zscore/status`
 
 Errors use HTTP `400`, `404`, `502`, `503`, or `504` as appropriate and return an `error` message plus a stable `code`.
+
+## ATM OI Z-score scanner
+
+Under **Scanners**, use **Update rolling Z-scores** to calculate stored closing
+scores from the local OI archive. Select the baseline period, side, direction and
+threshold, then click **Run Z-score scan** to apply the filters. Combined setups
+require both the dominant-side threshold and the opposite-side cutoff.
+
+After a page reload, both the matched-stock list and **All stored scores** list
+stay empty until a valid **Run Z-score scan**. Status polling, updating scores,
+sorting or searching do not reveal stocks before that first scan. Saved scores
+remain available on the server. Once run, the lists support immediate CE/PE
+sorting, stock search and export to a browser-local watchlist.
 
 ## IV scanners
 
@@ -212,6 +274,11 @@ configuration and provider limitations.
 ```bash
 python -m compileall -q run.py src tests
 node --check frontend/app.js
+node --check frontend/fair-price.js
+node --check frontend/oi-zscore.js
+node tests/test_fair_price.cjs
+node tests/test_oi_zscore_controls.cjs
+node tests/test_oi_zscore_startup.cjs
 python -m unittest discover -s tests -v
 ```
 

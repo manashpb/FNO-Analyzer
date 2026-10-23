@@ -45,7 +45,7 @@ requests. Source code is authoritative if this summary becomes stale.
 ## Dashboard features
 
 Top tabs are **Live**, **Historical**, **Sectors**, and **Scanners** (beside
-Sectors). Live offers AOC/Dhan source selection and automatic refresh. Historical
+Sectors), followed by **Option Fair Price**. Live offers AOC/Dhan source selection and automatic refresh. Historical
 snapshots and sector data come from AOC. The sidebar watchlist groups symbols.
 Live defaults to Dhan with automatic AOC backup via GET `/api/live?ticker=...`.
 Responses identify the actual `source` and any `fallback_reason`. Live startup
@@ -288,6 +288,9 @@ ATM OI Z-scores are implemented in `services/oi_zscore.py` and
 `frontend/oi-zscore.js`, with additive SQLite `oi_z_baselines`, `oi_z_scores`,
 `oi_z_meta` tables (archive schema remains 5). Scanners provides a manual rolling
 update and filters for period, side, direction and threshold.
+On page reload, Z-score stock lists stay empty until **Run Z-score scan** is
+clicked with valid settings. Startup status, update actions, polling, search and
+sorting do not reveal stocks before that first scan; stored scores are preserved.
 The matched and all-stocks lists support immediate CE/PE Z sorting high to low
 (unavailable last) and case-insensitive stock search, without rerunning the scan.
 Combined CE-high/PE-low and PE-high/CE-low setups require dominant Z >= threshold
@@ -434,3 +437,31 @@ deployment commands and environment setup.
   analytics segments, and respect shared pacing/caches when extending scanners.
 - Check `git diff --check`; avoid wholesale newline changes or unrelated rewrites.
 - No trades, order placement, or brokerage transactions are implemented here.
+
+
+## Option Fair Price
+
+`frontend/fair-price.js` provides a separate tab after Scanners with its own Dhan
+symbol/expiry selectors, one independent call box on the left and one put
+box on the right (stacked on narrow screens). Each box has an ATM-centred strike
+selector (configurable 1–80 available intervals per side, default ±8 plus ATM), segmented Buy/Sell radios, entry spot and nonnegative SL /
+target distances (SL defaults to 25 points). Buy CE / sell PE use SL below and target above entry; sell CE /
+buy PE reverse this. It preserves the OPTION-FAIR_PRICE widget calculation:
+max(0, LTP + delta × spot move + 0.5 × gamma × spot move² + theta / 7).
+Missing/invalid signed delta, gamma, theta or LTP leaves projections unavailable;
+no IV fitting or quote substitution. Expired contracts use intrinsic value.
+GET `/api/fair-price/expiries?ticker=...` lists active Dhan expiries; GET
+`/api/fair-price/chain?ticker=...&expiry=<raw expdatej>` uses the shared configured
+Dhan client/cache and full chain, including normalized cG/pG and cT/pT fields.
+No credentials reach the browser. Cache acquisition time is shown in IST. Auto
+refresh runs every 10 seconds only while this tab is active, backing off to 60
+seconds after errors and clearing unavailable quotes. Scenario inputs survive
+quote refresh; symbol changes reset entry spots. Delayed responses are discarded
+when symbol/expiry changes. Tests: `node tests/test_fair_price.cjs` and
+`python -m unittest discover -s tests -p test_fair_price.py`.
+
+Fair-price layout emphasizes current premium, entry inputs and the scenario price
+table. Each side explains its applied SL/target direction and always shows quote
+Greeks. Buy is green and Sell red; the calculation method is expandable.
+Changing the shared strike count immediately rebuilds both dropdowns locally,
+preserving selected strikes within the window and falling back to ATM otherwise.

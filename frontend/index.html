@@ -14,6 +14,7 @@
     <button id="modeHist" class="mode">Historical</button>
     <button id="modeSectors" class="mode">Sectors</button>
     <button id="modeScanners" class="mode">Scanners</button>
+    <button id="modeFairPrice" class="mode">Option Fair Price</button>
   </div>
   <div class="controls">
     <div id="symbolCtrls" class="ctrl-group">
@@ -65,6 +66,24 @@
 </aside>
 
 <div id="errorBanner" class="banner hidden"></div>
+
+<section id="fairPricePage" class="hidden panel">
+  <h2>Option Fair Price</h2>
+  <p class="fair-intro">Set your spot levels. Compare estimated call and put premiums.</p>
+  <div class="fair-toolbar">
+    <label>Symbol <input id="fairSymbol" list="fairSymbols" autocomplete="off" placeholder="Search symbol"><datalist id="fairSymbols"></datalist></label>
+    <label>Expiry <select id="fairExpiry" aria-label="Fair price expiry"></select></label>
+    <label title="Number of available strikes on each side, plus ATM">Strikes each side of ATM <input id="fairStrikeCount" type="number" min="1" max="80" step="1" value="8" aria-label="Fair price strikes each side of ATM"></label>
+    <button id="fairRefresh" type="button">Refresh</button>
+    <label><input id="fairAuto" type="checkbox" checked> Auto refresh (10s)</label>
+    <strong id="fairSpot">Spot —</strong>
+    <span id="fairUpdated">Last refreshed: —</span>
+  </div>
+  <p id="fairStatus" class="hint" role="status"></p>
+
+  <div class="fair-columns"><div id="fairCalls"></div><div id="fairPuts"></div></div>
+  <details class="fair-method"><summary>How prices are estimated</summary><p>Premium = LTP + Delta × spot move + ½ Gamma × spot move² + Theta / 7, floored at zero. This matches the original calculator. Greeks stay fixed at the refreshed quote; expired contracts use intrinsic value. Estimates are in option points per unit, before costs.</p><p>Stop-loss and target distances are measured from your entry spot. Buy calls and sell puts use a stop-loss below entry and a target above; sell calls and buy puts reverse these levels. Choose how many available strikes to show on each side of ATM (default 8 above and 8 below, plus ATM).</p></details>
+</section>
 
 <div id="chainPage">
 <section class="cards" id="cards"></section>
@@ -383,6 +402,7 @@
 <script src="static/oi-heatmap.js"></script>
 <script src="static/oi-zcycle.js"></script>
 <script src="static/chain-panels.js"></script>
+<script src="static/fair-price.js"></script>
 <script src="static/app.js"></script>
 </body>
 </html>

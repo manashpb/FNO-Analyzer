@@ -1949,15 +1949,19 @@ renderSkewExps();
     $("modeHist").classList.toggle("active", next === "hist");
     $("modeSectors").classList.toggle("active", next === "sectors");
     $("modeScanners").classList.toggle("active", next === "scanners");
+    const fairPrice = next === "fair-price";
+    $("modeFairPrice").classList.toggle("active", fairPrice);
+    $("fairPricePage").classList.toggle("hidden", !fairPrice);
+    window.FairPrice?.setActive(fairPrice);
     const sectors = next === "sectors";
     const scanners = next === "scanners";
-    $("symbolCtrls").classList.toggle("hidden", sectors || scanners);
+    $("symbolCtrls").classList.toggle("hidden", sectors || scanners || fairPrice);
     $("liveCtrls").classList.toggle("hidden", next !== "live");
     $("histCtrls").classList.toggle("hidden", next !== "hist");
-    $("chainPage").classList.toggle("hidden", sectors || scanners);
+    $("chainPage").classList.toggle("hidden", sectors || scanners || fairPrice);
     $("sectorPage").classList.toggle("hidden", !sectors);
     $("scannerPage").classList.toggle("hidden", !scanners);
-    $("updated").classList.toggle("hidden", scanners);
+    $("updated").classList.toggle("hidden", scanners || fairPrice);
     stopAuto();
     stopSectors();
     if (next === "live") { startAuto(); load(); }
@@ -2173,6 +2177,7 @@ renderSkewExps();
     $("modeHist").addEventListener("click", () => setMode("hist"));
     $("modeSectors").addEventListener("click", () => setMode("sectors"));
     $("modeScanners").addEventListener("click", () => setMode("scanners"));
+    $("modeFairPrice").addEventListener("click", () => setMode("fair-price"));
     initCombo();
     try {
       const [{ tickers: list }, runtime] = await Promise.all([

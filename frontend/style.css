@@ -336,3 +336,72 @@ body.watchlist-open .topbar, body.watchlist-open .controls { flex-wrap: wrap; }
   .cards .value { font-size: 18px; }
 }
 @media (max-width: 480px) { .cards { grid-template-columns: minmax(0, 1fr); } }
+
+/* Two independent option fair-price scenarios. */
+#fairPricePage {max-width:1280px; margin:20px auto; padding:24px}
+#fairPricePage h2 {margin:0; font-size:20px; letter-spacing:0; text-transform:none}
+.fair-intro {color:#9cabbc; margin:8px 0 24px}
+.fair-toolbar {display:flex; flex-wrap:wrap; gap:16px; align-items:end; padding-bottom:18px; border-bottom:1px solid #2b3644}
+.fair-toolbar label,.fair-inputs label,.fair-contract>label {display:flex; flex-direction:column; gap:8px; color:#b9c5d3; font-size:12px}
+.fair-toolbar label:has(input[type=checkbox]) {flex-direction:row; align-self:center}
+#fairUpdated {font-size:12px; color:#91a1b4; align-self:center; margin-left:auto}
+#fairSpot {align-self:center; font-size:16px}
+#fairStatus {min-height:16px; font-size:12px; margin:12px 0}
+.fair-columns {display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px}
+.fair-box {border:1px solid #344253; border-radius:12px; padding:22px; background:#141d28}
+.fair-box-head {display:flex; justify-content:space-between; align-items:center; gap:16px; padding-bottom:20px; border-bottom:1px solid #2b3644}
+.fair-box h3 {font-size:22px; margin:0; color:#edf4fa}
+.fair-box h3 span {font-size:12px; color:#9aafc4; background:#243142; border-radius:5px; padding:4px 7px; vertical-align:middle; margin-left:6px}
+.fair-market {text-align:right; display:flex; flex-direction:column; gap:4px}
+.fair-market>span,.fair-unit {font-size:11px; color:#8d9eb2}
+.fair-quote {font-size:24px; color:#edf4fa; font-variant-numeric:tabular-nums}
+.fair-contract {display:flex; align-items:end; justify-content:space-between; gap:16px; margin:20px 0}
+.fair-contract>label {flex:1}
+.fair-position {border:0; padding:0; margin:0; min-width:150px}
+.fair-position legend {font-size:12px; color:#b9c5d3; margin-bottom:8px}
+.fair-position>div {display:flex; padding:3px; background:#0c141f; border:1px solid #344253; border-radius:7px}
+.fair-position label {position:relative; flex:1; cursor:pointer; text-align:center}
+.fair-position input {position:absolute; opacity:0; width:100%; height:100%; inset:0; margin:0; cursor:pointer}
+.fair-position span {display:block; padding:7px 14px; border-radius:4px; font-size:13px; color:#95a5ba}
+.fair-position label:has(input[value=buy]) span {color:#7ce3bb}
+.fair-position label:has(input[value=sell]) span {color:#ffadb6}
+.fair-position label:has(input[value=buy]:checked) span {background:#196347; color:#fff; font-weight:600}
+.fair-position label:has(input[value=sell]:checked) span {background:#9a3449; color:#fff; font-weight:600}
+.fair-position label:has(input:focus-visible) span {outline:2px solid #65aaff}
+.fair-inputs {display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:20px 0 12px}
+.fair-inputs label {position:relative; gap:6px}
+.fair-inputs label:first-child {justify-content:space-between}
+.fair-unit {display:block}
+.fair-inputs input {width:100%; box-sizing:border-box; margin-top:4px}
+#fairPricePage input[type=number],#fairSymbol,#fairExpiry,.fair-contract select {background:#0d1621; color:#edf4fa; border:1px solid #3a4b60; border-radius:7px; padding:10px; font:inherit; min-width:0}
+#fairPricePage input:focus-visible,#fairPricePage select:focus-visible,#fairPricePage button:focus-visible,#fairPricePage summary:focus-visible {outline:2px solid #65aaff; outline-offset:3px}
+.fair-inputs input {font-size:16px!important}
+.fair-direction {font-size:12px; color:#b0c2d7; margin:12px 0 20px; line-height:1.5}
+.fair-box table {width:100%; margin:0; border-collapse:collapse; font-variant-numeric:tabular-nums}
+.fair-box th,.fair-box td {padding:14px 8px; text-align:right; border-bottom:1px solid #293646}
+.fair-box th:first-child {text-align:left}
+.fair-box thead th {font-size:11px; color:#91a1b4; font-weight:500; text-transform:none; letter-spacing:0}
+.fair-box tbody th {font-size:13px; font-weight:500; text-transform:none; letter-spacing:0}
+.fair-box tbody tr:first-child {background:#1c2d40}
+.fair-box tbody tr:nth-child(2) td:last-child {color:#ffadb6}
+.fair-box tbody tr:nth-child(3) td:last-child {color:#7ce3bb}
+.fair-box td:last-child {font-size:23px; font-weight:600; color:#edf4fa}
+.fair-box .fair-note {font-size:11px; margin:12px 0 16px; color:#92a4b9}
+.fair-greeks,.fair-method {font-size:12px; color:#92a4b9; line-height:1.6}
+.fair-greeks summary,.fair-method summary {cursor:pointer; width:fit-content}
+.fair-method {margin-top:22px; padding-top:16px; border-top:1px solid #2b3644}
+@media(max-width:900px) {.fair-columns {grid-template-columns:1fr} #fairPricePage {margin:12px; padding:18px} #fairUpdated {margin-left:0}}
+@media(max-width:480px) {.fair-inputs {grid-template-columns:1fr} .fair-box {padding:16px} .fair-contract {flex-wrap:wrap} .fair-box td:last-child {font-size:20px} .fair-inputs label:first-child {justify-content:start}}
+
+@media(max-width:700px) {
+  body:has(#fairPricePage:not(.hidden)) .topbar {flex-wrap:wrap; gap:10px}
+  body:has(#fairPricePage:not(.hidden)) .modes {order:3; width:100%; overflow-x:auto; flex-shrink:0}
+  body:has(#fairPricePage:not(.hidden)) .mode {white-space:nowrap; padding:6px 10px; flex-shrink:0}
+  body:has(#fairPricePage:not(.hidden)) .controls {display:none}
+  body:has(#fairPricePage:not(.hidden)) #wlToggle {margin-left:auto}
+}
+
+#fairStrikeCount {width:115px}
+.fair-greeks {padding-top:12px; border-top:1px solid #293646}
+.fair-greeks strong {font-weight:500; color:#b9c5d3}
+.fair-greeks p {margin-top:6px; color:#d3dfed; font-variant-numeric:tabular-nums}

@@ -3,7 +3,7 @@
   const $ = id => document.getElementById(id);
   const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const num = value => value == null ? "—" : Number(value).toFixed(2);
-  let state = null, timer = null, pending = false, version = 0;
+  let state = null, timer = null, pending = false, version = 0, hasRun = false;
   let applied = {months: "12", side: "either", direction: "absolute", threshold: 2, opposite: 0};
   const combined = side => side === "ce_dominant" || side === "pe_dominant";
   function pair(row) {
@@ -50,6 +50,16 @@
   }
   function render() {
     if (!state) return;
+    if (!hasRun) {
+      $("zResults").innerHTML = "";
+      $("zAll").innerHTML = "";
+      $("zStatus").textContent = state.status === "running"
+        ? `Updating Z-scores · ${state.processed}/${state.total} stocks. Run Z-score scan to display stocks.`
+        : "Run Z-score scan to display stocks.";
+      if (state.error) $("zStatus").textContent += " · " + state.error;
+      $("zUpdate").disabled = pending || state.status === "running";
+      return;
+    }
     const rows = state.rows || [];
     const query = $("zSearch").value.trim().toLowerCase();
     const sort = $("zSort").value || "strength";
@@ -101,6 +111,7 @@
     if (combined($("zSide").value) && (!$("zOpposite").value.trim() || !Number.isFinite(opposite))) {
       $("zStatus").textContent = "Enter a finite opposite-side Z cutoff."; return;
     }
+    hasRun = true;
     applied = {months: $("zPeriod").value, side: $("zSide").value, direction: $("zDirection").value, threshold, opposite};
     render();
   });

@@ -107,6 +107,8 @@ def _row_from_option(option: dict[str, Any], side: str) -> dict[str, Any]:
         f"{prefix}Chg": number(option.get("p_chng")),
         f"{prefix}IV": number(option.get("iv")),
         f"{prefix}D": number(greek.get("delta")),
+        f"{prefix}G": number(greek.get("gamma")),
+        f"{prefix}T": number(greek.get("theta")),
         f"{prefix}Bid": number(option.get("bid")),
         f"{prefix}Ask": number(option.get("ask")),
     }

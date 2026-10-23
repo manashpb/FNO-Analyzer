@@ -75,6 +75,7 @@ class Application:
         if chain is None:
             raw = self.dhan.option_chain(seg, sid, expiry)
             chain = normalize_dhan_chain(raw, str(entry.get("aoc") or ""), self.settings["chain"]["max_strikes"])
+            chain["refreshed_at"] = datetime.now(IST).isoformat()
             self.chain_cache.set(key, chain)
         return chain
 
@@ -230,6 +231,25 @@ class Application:
         if path == "/api/dhan/map":
             refresh = self._value(query, "refresh", "").lower() in ("1", "true", "yes")
             return self.dhan_map(refresh), 200
+        if path == "/api/fair-price/expiries":
+            entry = self._entry(self._ticker(query))
+            values = expiry_ids(self.dhan.expiry_list(int(entry["seg"]), int(entry["sid"])))
+            now = datetime.now(IST)
+            values = [value for value in values
+                      if datetime.fromtimestamp(value + EXPDATEJ_OFFSET, IST).replace(
+                          hour=15, minute=30, second=0, microsecond=0) > now]
+            return {"expiries": [{"id": value, "label": format_expiry(value + EXPDATEJ_OFFSET)}
+                                  for value in sorted(values)]}, 200
+        if path == "/api/fair-price/chain":
+            entry = self._entry(self._ticker(query))
+            expiry = self._integer(query, "expiry", minimum=1)
+            chain = self._dhan_chain_data(entry, expiry)
+            return {"snapshot": chain["snapshot"],
+                    "strikes": chain.get("_all_strikes") or chain["strikes"],
+                    "expiry": expiry,
+                    "expires_at": datetime.fromtimestamp(expiry + EXPDATEJ_OFFSET, IST).replace(
+                        hour=15, minute=30, second=0, microsecond=0).isoformat(),
+                    "refreshed_at": chain["refreshed_at"]}, 200
         if path == "/api/dhan/chain":
             ticker = self._ticker(query)
             return self._dhan_result(self._entry(ticker)), 200

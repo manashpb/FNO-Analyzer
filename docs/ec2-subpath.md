@@ -163,7 +163,7 @@ Review the working tree and stage only the intended files. For the change that
 allows current-day closing archive updates at or after 16:00 IST:
 
 ```powershell
-cd E:\TRADING\FNO_ANALYSIS\FNO-Analyzer
+cd E:\TRADING\VCCL\FNO-Analyzer
 
 git status --short
 git add AGENTS.md docs/oi-history.md docs/ec2-subpath.md src/fno_analyzer/services/oi_downloader.py tests/test_oi_downloader.py

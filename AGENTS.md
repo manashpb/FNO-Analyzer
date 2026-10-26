@@ -437,6 +437,11 @@ deployment commands and environment setup.
   analytics segments, and respect shared pacing/caches when extending scanners.
 - Check `git diff --check`; avoid wholesale newline changes or unrelated rewrites.
 - No trades, order placement, or brokerage transactions are implemented here.
+- GET `/api/scalper/chain?ticker=...&expiry=...` is the Scalper Terminal's
+  browser-token snapshot bridge. It uses only the existing Dhan browser client,
+  verifies exact expiry, retains acquisition time, and shares a one-second cache
+  under a lock. It returns all normalized strikes, without analytics or AOC fallback.
+  Token Sync continues to own the browser JWT; no token is returned to the terminal.
 
 
 ## Option Fair Price

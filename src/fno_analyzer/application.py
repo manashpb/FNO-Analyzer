@@ -37,6 +37,8 @@ class Application:
         self.oi_zscore = OIZScoreService(self.oi_history.store)
         self.oi_levels = OILevelsScanner(self.oi_history.store)
         self.chain_cache = TTLCache(settings["cache"].get("chain_ttl_seconds", 6))
+        self.scalper_cache = TTLCache(1)
+        self.scalper_lock = Lock()
         self.map_lock = Lock()
 
     def ticker_meta(self, name: str, fallback: str | None = None) -> dict[str, Any] | None:
@@ -98,6 +100,29 @@ class Application:
             },
         }
 
+    def scalper_chain(self, ticker: str, expiry: int) -> dict[str, Any]:
+        """Browser-session snapshots only, with a short shared cache and no AOC fallback."""
+        entry = self._entry(ticker)
+        key = (int(entry['seg']), int(entry['sid']), expiry)
+        with self.scalper_lock:
+            cached = self.scalper_cache.get(key)
+            if cached is not None:
+                return cached
+            acquired = datetime.now(IST).isoformat()
+            raw = self.dhan.option_chain(key[0], key[1], expiry)
+            actual = {int(item['expdatej'] if isinstance(item, dict) else item)
+                      for item in raw.get('explst', [])}
+            if actual != {expiry}:
+                raise ProviderError('Dhan snapshot expiry does not match the selected contract', provider='dhan')
+            chain = normalize_dhan_chain(raw, ticker, self.settings['chain']['max_strikes'])
+            if not chain.get('_all_strikes'):
+                raise ProviderError('Dhan returned an empty browser snapshot', provider='dhan')
+            result = {'source': 'dhan-browser', 'ticker': ticker, 'expiry': expiry,
+                      'snapshot': chain['snapshot'], 'strikes': chain['_all_strikes'],
+                      'refreshed_at': acquired, 'timestamp_kind': 'snapshot-acquisition'}
+            self.scalper_cache.set(key, result)
+            return result
+
     def _entry(self, ticker: str) -> dict[str, Any]:
         entry = lookup_map(self.settings["map_path"], ticker)
         if entry is None:
@@ -123,6 +148,8 @@ class Application:
         return start_ms, end_ms
 
     def dispatch(self, path: str, query: dict[str, list[str]]) -> tuple[dict[str, Any], int]:
+        if path == '/api/scalper/chain':
+            return self.scalper_chain(self._ticker(query), self._integer(query, 'expiry', minimum=1)), 200
         if path == "/api/scanners/oi-levels/run":
             def optional(name, default):
                 value = self._value(query, name, default)

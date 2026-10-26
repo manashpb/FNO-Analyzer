@@ -112,11 +112,16 @@ class Application:
             raw = self.dhan.option_chain(key[0], key[1], expiry)
             actual = {int(item['expdatej'] if isinstance(item, dict) else item)
                       for item in raw.get('explst', [])}
-            if actual != {expiry}:
+            if expiry not in actual:
                 raise ProviderError('Dhan snapshot expiry does not match the selected contract', provider='dhan')
             chain = normalize_dhan_chain(raw, ticker, self.settings['chain']['max_strikes'])
             if not chain.get('_all_strikes'):
                 raise ProviderError('Dhan returned an empty browser snapshot', provider='dhan')
+            by_strike = {float(k): v for k, v in (raw.get('oc') or {}).items()}
+            for row in chain['_all_strikes']:
+                original = by_strike.get(row['sp'], {})
+                for prefix, side in [('c', 'ce'), ('p', 'pe')]:
+                    row[prefix + 'SecurityId'] = str((original.get(side) or {}).get('sid') or '')
             result = {'source': 'dhan-browser', 'ticker': ticker, 'expiry': expiry,
                       'snapshot': chain['snapshot'], 'strikes': chain['_all_strikes'],
                       'refreshed_at': acquired, 'timestamp_kind': 'snapshot-acquisition'}

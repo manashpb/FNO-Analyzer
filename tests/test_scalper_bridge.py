@@ -16,8 +16,8 @@ class ScalperBridgeTests(unittest.TestCase):
         app.scalper_cache, app.scalper_lock = TTLCache(1), Lock()
         app._entry = Mock(return_value={'seg': 0, 'sid': 13})
         app.dhan, app.aoc = Mock(), Mock()
-        app.dhan.option_chain.return_value = {'sltp': 100, 'explst': [1470000000],
-            'oc': {str(k): {'ce': {'ltp': 10, 'bid': 9, 'ask': 11}} for k in [90,100,110]}}
+        app.dhan.option_chain.return_value = {'sltp': 100, 'explst': [1470000000,1470001000],
+            'oc': {str(k): {'ce': {'sid': k, 'ltp': 10, 'bid': 9, 'ask': 11}} for k in [90,100,110]}}
         return app
 
     def test_exact_expiry_full_chain_and_original_cached_timestamp(self):
@@ -27,6 +27,7 @@ class ScalperBridgeTests(unittest.TestCase):
         self.assertEqual(status,200)
         self.assertEqual(result['source'],'dhan-browser')
         self.assertEqual(len(result['strikes']),3)
+        self.assertEqual(result['strikes'][0]['cSecurityId'],'90')
         self.assertEqual(result['refreshed_at'],again['refreshed_at'])
         app.dhan.option_chain.assert_called_once_with(0,13,1470000000)
         app.aoc.fetch_live.assert_not_called()

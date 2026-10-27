@@ -1,4 +1,5 @@
 import time
+import math
 from threading import Lock
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
@@ -101,8 +102,9 @@ class AocClient:
                 "AOC is not configured; set providers.aoc.token or FNO_AOC_TOKEN",
                 provider=self.name,
             )
-        url = (f"{self.v27_base_url}/{ENDPOINTS[endpoint]}"
-               if self.api_mode == "v27" and endpoint in ("tickers", "live", "expiries", "sectors", "sector_components") else
+        name = "sectorial-intraday" if self.api_mode == "v27" and endpoint == "sector_intraday" else ENDPOINTS[endpoint]
+        url = (f"{self.v27_base_url}/{name}"
+               if self.api_mode == "v27" else
                f"{self.history_base_url}/{ENDPOINTS[endpoint]}"
                if endpoint in ("historical", "expiries") else self._url(endpoint))
         try:
@@ -132,7 +134,7 @@ class AocClient:
             payload = response.json()
         except ValueError as exc:
             raise ProviderError("AOC returned invalid JSON", provider=self.name) from exc
-        if isinstance(payload, list) and endpoint in ("tickers", "expiries"):
+        if isinstance(payload, list) and endpoint in ("tickers", "expiries", "sector_intraday"):
             payload = {"data": payload}
         if not isinstance(payload, dict):
             raise ProviderError("AOC returned an invalid response", provider=self.name)
@@ -176,10 +178,39 @@ class AocClient:
         return payload if "data" in payload else {"data": payload}
 
     def fetch_sector_intraday(self, start_ms: int, end_ms: int, interval: int) -> dict[str, Any]:
-        return self._get(
+        payload = self._get(
             "sector_intraday",
             {"startTime": int(start_ms), "endTime": int(end_ms), "interval": int(interval)},
         )
+        if self.api_mode != "v27":
+            return payload
+        sectors = payload.get("data")
+        if not isinstance(sectors, list):
+            raise ProviderError("AOC sector intraday response was invalid", provider=self.name)
+        # Every sector must use the same timeline expected by the chart API.
+        # Join by timestamp rather than position: sectors can have missing bars.
+        rows = []
+        timestamps = set()
+        for sector in sectors:
+            if not isinstance(sector, dict) or not isinstance(sector.get("data"), list):
+                raise ProviderError("AOC sector intraday series was invalid", provider=self.name)
+            points = {}
+            for point in sector["data"]:
+                if not isinstance(point, dict):
+                    raise ProviderError("AOC sector intraday point was invalid", provider=self.name)
+                stamp = point.get("timestamp")
+                if isinstance(stamp, bool) or not isinstance(stamp, (int, float)) or not math.isfinite(stamp):
+                    raise ProviderError("AOC sector intraday timestamp was invalid", provider=self.name)
+                points[stamp] = point
+            timestamps.update(points)
+            rows.append((sector, points))
+        timeline = sorted(timestamps)
+        return {"data": [{"symbol": sector.get("symbol"),
+                          "displaySymbol": sector.get("displaySymbol"),
+                          "ts": timeline,
+                          "ltp": [points.get(stamp, {}).get("lastTradedPrice") for stamp in timeline],
+                          "pchg": [points.get(stamp, {}).get("percentChange") for stamp in timeline]}
+                         for sector, points in rows]}
 
     def fetch_sector_components(self, sector_id: int) -> dict[str, Any]:
         payload = self._get("sector_components", {"sectorId": int(sector_id)})

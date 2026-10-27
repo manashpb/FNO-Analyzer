@@ -336,8 +336,11 @@ Requests use 16:00 IST and only accept matching source dates/timestamps in the
 and after expiry: never save them as the requested date. Calendar DTE is exact;
 session DTE returns null unless a full sourced calendar is available. Unknown
 dates are probed without assuming weekday trading or global holidays.
-AOC historical/expiry APIs use `providers.aoc.history_base_url` (default
-`https://api.niftychain.in/api/v10`). All AOC requests share serialization and
+AOC v27 mode routes historical/expiry APIs through `v27_base_url` alongside live data.
+Legacy mode uses `providers.aoc.history_base_url` (default
+`https://api.niftychain.in/api/v10`). V27 sector intraday uses `sectorial-intraday`;
+per-sector point objects are normalized to shared timestamp-aligned arrays,
+with missing bars kept as nulls. Legacy compact responses remain supported. All AOC requests share serialization and
 `request_interval_seconds` (default 2, minimum 1); this is not an official quota.
 User-supplied holidays in `services/oi_calendar.py` are excluded before requests.
 If the first six actual fetches on a date are unavailable, skip the remaining

@@ -37,7 +37,7 @@ class V27Tests(unittest.TestCase):
             self.assertEqual(client.session.get.call_args.kwargs["params"]["symbol"], "NIFTY")
             client._request("historical", {})
             self.assertEqual(client.session.get.call_args.args[0],
-                             "https://api.niftychain.in/api/v10/historical-data")
+                             (base if mode == "v27" else "https://api.niftychain.in/api/v10") + "/historical-data")
 
     def test_sector_routes_and_normalization(self):
         for mode, base in [("v27", "https://v27.aoccalculator.in/api/v27"),
@@ -55,6 +55,45 @@ class V27Tests(unittest.TestCase):
             client._get = Mock(return_value=result)
             self.assertEqual([row["symbol"] for row in client.fetch_sector_components(1)["components"]], ["TCS", "INFY"])
             self.assertEqual(client.session.get.call_args.args[0], base + "/sectorial-components-compact")
+
+    def test_intraday_route_and_timestamp_alignment(self):
+        client = self.client()
+        response = Mock(status_code=200)
+        response.json.return_value = [
+            {"symbol": "IT", "displaySymbol": "IT", "data": [
+                {"timestamp": 2000, "lastTradedPrice": 20, "percentChange": 0},
+                {"timestamp": 1000, "lastTradedPrice": 10, "percentChange": -1}]},
+            {"symbol": "BANK", "data": [
+                {"timestamp": 2000, "lastTradedPrice": 30, "percentChange": 2}]}]
+        client.session.get = Mock(return_value=response)
+        payload = client.fetch_sector_intraday(1000, 2000, 1)
+        self.assertEqual(client.session.get.call_args.args[0],
+                         "https://v27.aoccalculator.in/api/v27/sectorial-intraday")
+        self.assertEqual(client.session.get.call_args.kwargs["params"],
+                         {"startTime": 1000, "endTime": 2000, "interval": 1})
+        self.assertEqual(payload["data"][0]["ts"], [1000, 2000])
+        self.assertEqual(payload["data"][0]["pchg"], [-1, 0])
+        self.assertEqual(payload["data"][1]["ltp"], [None, 30])
+        self.assertEqual(payload["data"][1]["pchg"], [None, 2])
+
+    def test_intraday_empty_and_malformed_response(self):
+        from fno_analyzer.errors import ProviderError
+        client = self.client()
+        client._get = Mock(return_value={"data": []})
+        self.assertEqual(client.fetch_sector_intraday(1, 2, 1), {"data": []})
+        for data in ({}, [None], [{"data": {}}], [{"data": [{"timestamp": "bad"}]}]):
+            client._get.return_value = {"data": data}
+            with self.assertRaises(ProviderError):
+                client.fetch_sector_intraday(1, 2, 1)
+
+    def test_legacy_intraday_is_preserved(self):
+        client = self.client("legacy")
+        response = Mock(status_code=200)
+        response.json.return_value = {"data": [{"symbol": "IT", "ts": [1], "ltp": [10], "pchg": [0]}]}
+        client.session.get = Mock(return_value=response)
+        self.assertEqual(client.fetch_sector_intraday(1, 2, 1), response.json.return_value)
+        self.assertEqual(client.session.get.call_args.args[0],
+                         "https://legacy.invalid/api/v10/sectorial-intraday-compact")
 
     def test_unwrapped_chain_matches_legacy(self):
         chain = {"snapshot": {"k": ["s", "uv"], "v": ["nifty", 22571.45]},

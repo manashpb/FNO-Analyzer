@@ -283,3 +283,9 @@ python -m unittest discover -s tests -v
 ```
 
 The V2 service is ready when `/api/health` returns `200`. `/api/ready` returns `503` until at least one provider has a secret configured. Rotate any credentials that were present in the V1 files before deploying V2.
+
+### Sector-grouped watchlists and exports
+
+All scanner result tables offer **Add selected by sector** beside the existing flat-list action. It adds checked symbols to the chosen watchlist and displays that list under sector headings, preserving the grouping across reloads. Sector membership uses the cached provider groups and loads in the background when needed. Each symbol appears once (first matching sector); indices remain separate and unmatched symbols appear under Other / not classified. Refresh the selected grouped watchlist to reload sector membership.
+
+Custom watchlists offer **Copy TradingView string by sector**, using `###Sector` section headings, and **Copy Dhan string**, using comma-separated exchange symbols without prefixes (for example `TCS,LT,M&M`). The existing flat TradingView export remains available. Clipboard failures select the export field for manual copying. Watchlists remain browser-local.

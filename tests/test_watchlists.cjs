@@ -61,6 +61,19 @@ function scan(root,count){root.replaceChildren();const table=new Node('table'),h
   const c=harness(cache,async()=>{calls++;throw Error('should not fetch');});c.api.setUniverse(universe,{mapped:[{aoc:'NIFTY',seg:0}]},()=>{});
   assert.equal(c.get('wlSelect').value,'sectors');assert.equal(calls,0);
   const groups=c.get('wlBody').children.filter(n=>n.className==='wl-group');assert(groups.some(n=>n.children[0].textContent==='Indices (1)'));assert(groups.some(n=>n.children[0].textContent==='IT (1)'));
+  c.get('wlName').value='Grouped';c.get('wlCreate').onclick();const groupedId=c.get('wlSelect').value;
+  c.api.add(groupedId,['TCS','LT','NIFTY'],true);
+  assert(c.get('wlBody').children.some(n=>n.children[0]?.textContent==='IT (1)'));
+  assert.equal(c.api.groupedTradingViewSymbols(['TCS','LT','NIFTY','TCS']),'###Indices,NSE:NIFTY,###IT,NSE:TCS,###Other / not classified,NSE:LT');
+  assert.equal(c.api.dhanSymbols(['LARSEN','MAHINDRA','TCS','TCS']),'LT,M&M,TCS');
+  await c.get('wlExportGrouped').onclick();assert(c.clipboard.text.includes('###IT,NSE:TCS'));
+  await c.get('wlExportDhan').onclick();assert.equal(c.clipboard.text,'TCS,LT,NIFTY');
+  const restored=harness(c.storage);restored.api.setUniverse(universe,{mapped:[{aoc:'NIFTY',seg:0}]},()=>{});
+  assert(restored.get('wlBody').children.some(n=>n.children[0]?.textContent==='IT (1)'));
+  const groupedRoot=c.get('groupedResults');scan(groupedRoot,2);c.api.mount('groupedResults',[{symbol:'TCS'},{symbol:'LT'}],'grouped1');
+  const tools=groupedRoot.children[0];assert(tools.children[3].disabled);tools.children[0].children[0].checked=true;tools.children[0].children[0].onchange();
+  tools.children[1].value=groupedId;tools.children[3].onclick();
+  assert(JSON.parse(c.storage.get('fno-watchlists-v1')).lists.find(l=>l.id===groupedId).grouped);
   // First sector request is asynchronous and does not hide available symbols.
   let release;const pending=harness(new Map(),()=>new Promise(r=>release=r));pending.api.setUniverse(universe,null,()=>{});
   assert(pending.get('wlBody').querySelectorAll('.wl-item').length===4);

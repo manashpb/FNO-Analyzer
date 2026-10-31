@@ -6,7 +6,12 @@
   const scans = new Map();
   let sectors=[], sectorLoading=false, sectorLoaded=false, sectorAttempted=false, sectorNote='';
   try {const cache=JSON.parse(localStorage.getItem('fno-watchlist-sectors-v1'));if(Array.isArray(cache?.groups)){sectors=cache.groups.filter(g=>typeof g.name==='string'&&Array.isArray(g.symbols));sectorLoaded=true;sectorNote='Cached sector groups';}}catch(_){}
-  async function loadSectors(force=false) {
+  let sectorPromise=null;
+  function loadSectors(force=false) {
+    if(sectorLoading)return sectorPromise;
+    sectorPromise=fetchSectors(force);return sectorPromise;
+  }
+  async function fetchSectors(force=false) {
     if(!ready || sectorLoading || ((sectorLoaded || sectorAttempted) && !force))return;
     sectorAttempted=true;sectorLoading=true;sectorNote='Loading sector groups in background';if(selected==='sectors')render();
     async function request(url){const response=await fetch(url);const data=await response.json();if(!response.ok)throw Error(typeof data.error==='string' ? data.error : data.error?.message || 'Sector data unavailable');return data;}
@@ -21,7 +26,7 @@
       sectors=pending;sectorLoaded=true;sectorNote='Sector groups loaded';
       try{localStorage.setItem('fno-watchlist-sectors-v1',JSON.stringify({groups:sectors}));}catch(_){}
     }catch(e){sectorNote=e.message+'. Use refresh to retry; uncategorized symbols remain available.';}
-    finally{sectorLoading=false;if(selected==='sectors')render();}
+    finally{sectorLoading=false;render();}
   }
   try {
     const saved = JSON.parse(localStorage.getItem(key));
@@ -29,7 +34,7 @@
       const ids = new Set();
       lists = saved.lists.filter(l => l && typeof l.id === 'string' && !['all','sectors'].includes(l.id) &&
         typeof l.name === 'string' && Array.isArray(l.symbols) && !ids.has(l.id) && ids.add(l.id))
-        .map(l => ({id:l.id, name:l.name, symbols:[...new Set(l.symbols.filter(s => typeof s === 'string'))]}));
+        .map(l => ({id:l.id, name:l.name, grouped:l.grouped===true, symbols:[...new Set(l.symbols.filter(s => typeof s === 'string'))]}));
       selected = ['all','sectors'].includes(saved.selected) || lists.some(l => l.id === saved.selected) ? saved.selected : 'all';
     }
   } catch (_) { /* Keep a usable default when browser storage is unavailable. */ }
@@ -51,7 +56,7 @@
     document.querySelectorAll('.scan-watchlist-target').forEach(targets);
   }
   function resolve(symbol) { return lookup.get(String(symbol).trim().toUpperCase()); }
-  function add(id, symbols) {
+  function add(id, symbols, grouped=false) {
     const list=lists.find(l=>l.id===id);
     if (!list) return 'Create a watchlist and choose it first.';
     if (!ready) return 'Symbols are still loading. Try again in a moment.';
@@ -62,6 +67,7 @@
       if (!ticker) {unknown.push(String(symbol).trim());continue;}
       if (!list.symbols.includes(ticker.Name)) {list.symbols.push(ticker.Name);added++;}
     }
+    if(grouped){list.grouped=true;loadSectors();}
     selected=id;render();save();
     return `${added} symbols added to ${list.name}.`+(unknown.length ? ` Unknown symbols: ${[...new Set(unknown)].join(', ')}.` : '');
   }
@@ -71,6 +77,7 @@
     const custom=lists.find(l=>l.id===selected);
     $('wlClear').disabled=$('wlDelete').disabled=$('wlAdd').disabled=!custom;
     $('wlExport').disabled=!custom || !custom.symbols.length;
+    $('wlExportGrouped').disabled=$('wlExportDhan').disabled=$('wlExport').disabled;
     $('wlTradingView').value=custom ? tradingViewSymbols(custom.symbols) : '';
     const body=$('wlBody');body.replaceChildren();
     const indices=new Set((map?.mapped || []).filter(m=>String(m.seg)==='0').map(m=>m.aoc));
@@ -78,6 +85,9 @@
     const items=custom ? custom.symbols.map(name=>universe.find(t=>t.Name===name) || {Name:name}) : universe;
     let groups=custom ? [[custom.name,items]] : [['Indices',items.filter(t=>indices.has(t.Name))],
       ['Stocks',items.filter(t=>!indices.has(t.Name)&&!commodities.has(t.Name))],['Commodities',items.filter(t=>commodities.has(t.Name))]];
+    if(custom?.grouped) {
+      groups=sectorGroups(custom.symbols).map(([name,symbols])=>[name,symbols.map(name=>resolve(name)||{Name:name})]);
+    }
     if(selected==='sectors') {
       const placed=new Set([...indices,...commodities]);
       const sectorGroups=sectors.map(group=>[group.name,group.symbols.map(resolve).filter(t=>t&&!indices.has(t.Name)&&!commodities.has(t.Name))]);
@@ -124,17 +134,42 @@
     const commodities=new Set((map?.unmapped || []).filter(m=>(m.reason || '').includes("segment 'M'")).map(m=>m.aoc));
     return [...new Set(symbols.map(symbol => aliases[symbol] || `${commodities.has(symbol) ? 'MCX' : 'NSE'}:${symbol}`))].join(',');
   }
-  $('wlExport').onclick=async()=>{
+  function sectorGroups(symbols) {
+    const remaining=new Set(symbols), groups=[];
+    const indices=new Set((map?.mapped || []).filter(m=>String(m.seg)==='0').map(m=>m.aoc));
+    function take(name, candidates) {
+      const rows=[...new Set(candidates)].filter(symbol=>remaining.has(symbol));
+      rows.forEach(symbol=>remaining.delete(symbol));
+      if(rows.length)groups.push([name,rows]);
+    }
+    take('Indices',[...indices]);
+    for(const group of sectors)take(group.name,group.symbols.map(s=>resolve(s)?.Name).filter(Boolean));
+    take('Other / not classified',[...remaining]);
+    return groups;
+  }
+  function groupedTradingViewSymbols(symbols) {
+    return sectorGroups(symbols).map(([name,rows])=>'###'+name.replace(/[,\r\n#]/g,' ') + ','+tradingViewSymbols(rows)).join(',');
+  }
+  function dhanSymbols(symbols) {
+    return tradingViewSymbols(symbols).split(',').map(s=>s.replace(/^[^:]+:/,'')).join(',');
+  }
+  async function copyExport(format) {
     const list=lists.find(l=>l.id===selected);if(!list?.symbols.length)return;
-    const field=$('wlTradingView');field.value=tradingViewSymbols(list.symbols);
+    if(format==='grouped')await loadSectors();
+    const field=$('wlTradingView');
+    field.value=format==='grouped' ? groupedTradingViewSymbols(list.symbols) : format==='dhan' ? dhanSymbols(list.symbols) : tradingViewSymbols(list.symbols);
+    const target=format==='dhan' ? 'Dhan' : 'TradingView';
     try {
       await navigator.clipboard.writeText(field.value);
-      message(`${list.symbols.length} symbols copied. Paste into TradingView.`);
+      message(`${list.symbols.length} symbols copied. Paste into ${target}.`);
     } catch (_) {
       field.focus();field.select();
-      message('Select and copy the TradingView string with Ctrl+C, then paste into TradingView.');
+      message(`Select and copy the ${target} string with Ctrl+C, then paste into ${target}.`);
     }
-  };
+  }
+  $('wlExport').onclick=()=>copyExport('flat');
+  $('wlExportGrouped').onclick=()=>copyExport('grouped');
+  $('wlExportDhan').onclick=()=>copyExport('dhan');
   function mount(id, rows, generation) {
     const root=$(id), table=root.querySelector('table');if(!table)return;
     let state=scans.get(id);
@@ -147,7 +182,8 @@
     const destination=document.createElement('select');destination.className='scan-watchlist-target';destination.setAttribute('aria-label','Destination watchlist');targets(destination);if(lists.some(l=>l.id===state.target))destination.value=state.target;destination.onchange=()=>state.target=destination.value;
     const button=document.createElement('button');button.textContent='Add selected to watchlist';button.type='button';
     const note=document.createElement('span');note.className='hint';note.setAttribute('role','status');
-    toolbar.append(allLabel,destination,button,note);root.insertBefore(toolbar,table);
+    const groupedButton=document.createElement('button');groupedButton.type='button';groupedButton.textContent='Add selected by sector';
+    toolbar.append(allLabel,destination,button,groupedButton,note);root.insertBefore(toolbar,table);
     const header=document.createElement('th');header.textContent='Select';table.querySelector('thead tr').prepend(header);
     const boxes=[];
     table.querySelectorAll('tbody tr').forEach((tr,index)=>{
@@ -155,16 +191,17 @@
       box.setAttribute('aria-label','Select '+symbol);box.onchange=()=>{box.checked?state.selected.add(symbol):state.selected.delete(symbol);sync();};
       cell.appendChild(box);tr.prepend(cell);boxes.push(box);
     });
-    function sync(){selectAll.checked=symbols.length>0&&symbols.every(s=>state.selected.has(s));selectAll.indeterminate=state.selected.size>0&&!selectAll.checked;button.disabled=!state.selected.size;}
+    function sync(){selectAll.checked=symbols.length>0&&symbols.every(s=>state.selected.has(s));selectAll.indeterminate=state.selected.size>0&&!selectAll.checked;button.disabled=groupedButton.disabled=!state.selected.size;}
     selectAll.onchange=()=>{state.selected=selectAll.checked?new Set(symbols):new Set();boxes.forEach(b=>b.checked=selectAll.checked);sync();};
-    button.onclick=()=>{const result=add(destination.value,[...state.selected]);note.textContent=result;message(result);};sync();
+    button.onclick=()=>{const result=add(destination.value,[...state.selected]);note.textContent=result;message(result);};
+    groupedButton.onclick=()=>{const result=add(destination.value,[...state.selected],true);note.textContent=result;message(result);};sync();
   }
-  window.watchlists={add,mount,tradingViewSymbols,setUniverse(tickers,dhanMap,onSelect){
+  window.watchlists={add,mount,tradingViewSymbols,groupedTradingViewSymbols,dhanSymbols,setUniverse(tickers,dhanMap,onSelect){
     universe=tickers;map=dhanMap;choose=onSelect;ready=universe.length>0;lookup=new Map();
     for(const ticker of universe)lookup.set(ticker.Name.toUpperCase(),ticker);
     for(const entry of map?.mapped || []){const ticker=lookup.get(String(entry.aoc).toUpperCase());if(ticker)for(const alias of [entry.ticker,entry.symbol,entry.sym,entry.dhan])if(alias)lookup.set(String(alias).toUpperCase(),ticker);}
     for(const [alias,name] of [['LARSEN','LT'],['NIFTY_2','NIFTY'],['MAHINDRA','M&M']]){const ticker=lookup.get(name);if(ticker)lookup.set(alias,ticker);}
     render();if(selected==='sectors')loadSectors();
-  },refresh(){render();if(selected==='sectors')loadSectors(true);},setActive(name){active=name;document.querySelectorAll('.wl-item').forEach(el=>el.classList.toggle('sel',el.dataset.name===active));}};
+  },refresh(){render();if(selected==='sectors'||lists.find(l=>l.id===selected)?.grouped)loadSectors(true);},setActive(name){active=name;document.querySelectorAll('.wl-item').forEach(el=>el.classList.toggle('sel',el.dataset.name===active));}};
   render();
 })();

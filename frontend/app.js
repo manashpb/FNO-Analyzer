@@ -2200,7 +2200,8 @@ renderSkewExps();
       // Load lot metadata independently so Dhan startup and chains remain responsive.
       fetchJson("api/tickers").then(({tickers: metadata}) => {
         const byName = new Map((metadata || []).map(t => [t.Name, t]));
-        tickers = tickers.map(t => ({...t, ...byName.get(t.Name)}));
+        // The saved Dhan map can lag new F&O listings. Keep every provider ticker.
+        tickers = [...new Map([...tickers, ...(metadata || [])].map(t => [t.Name, {...tickers.find(old => old.Name===t.Name), ...t}])).values()];
         if (ticker) ticker = tickers.find(t => t.Name === ticker.Name) || ticker;
         if (state?.ticker) {
           state.ticker = {...state.ticker, ...byName.get(state.ticker.Name)};

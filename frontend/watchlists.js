@@ -6,12 +6,24 @@
   const scans = new Map();
   let sectors=[], sectorLoading=false, sectorLoaded=false, sectorAttempted=false, sectorNote='';
   try {const cache=JSON.parse(localStorage.getItem('fno-watchlist-sectors-v1'));if(Array.isArray(cache?.groups)){sectors=cache.groups.filter(g=>typeof g.name==='string'&&Array.isArray(g.symbols));sectorLoaded=true;sectorNote='Cached sector groups';}}catch(_){}
+  // Published classifications supersede old cached index constituent groups.
+  const stockSectors=window.stockSectors || {};
+  if(Object.keys(stockSectors).length) {
+    const groups=new Map();
+    for(const [symbol,info] of Object.entries(stockSectors)) {
+      if(!groups.has(info.sector))groups.set(info.sector,[]);
+      groups.get(info.sector).push(symbol);
+    }
+    sectors=[...groups].sort(([a],[b])=>a.localeCompare(b)).map(([name,symbols])=>({name,symbols}));
+    sectorLoaded=true;sectorNote='NSE stock sector classifications (31 Oct 2026)';
+  }
   let sectorPromise=null;
   function loadSectors(force=false) {
     if(sectorLoading)return sectorPromise;
     sectorPromise=fetchSectors(force);return sectorPromise;
   }
   async function fetchSectors(force=false) {
+    if(Object.keys(stockSectors).length){render();return;}
     if(!ready || sectorLoading || ((sectorLoaded || sectorAttempted) && !force))return;
     sectorAttempted=true;sectorLoading=true;sectorNote='Loading sector groups in background';if(selected==='sectors')render();
     async function request(url){const response=await fetch(url);const data=await response.json();if(!response.ok)throw Error(typeof data.error==='string' ? data.error : data.error?.message || 'Sector data unavailable');return data;}
@@ -55,7 +67,7 @@
   function refreshTargets() {
     document.querySelectorAll('.scan-watchlist-target').forEach(targets);
   }
-  function resolve(symbol) { return lookup.get(String(symbol).trim().toUpperCase()); }
+  function resolve(symbol) { const name=String(symbol).trim().toUpperCase();return lookup.get(name) || (stockSectors[name] ? {Name:name,disp:stockSectors[name].name} : undefined); }
   function add(id, symbols, grouped=false) {
     const list=lists.find(l=>l.id===id);
     if (!list) return 'Create a watchlist and choose it first.';
@@ -80,7 +92,7 @@
     $('wlExportGrouped').disabled=$('wlExportDhan').disabled=$('wlExport').disabled;
     $('wlTradingView').value=custom ? tradingViewSymbols(custom.symbols) : '';
     const body=$('wlBody');body.replaceChildren();
-    const indices=new Set((map?.mapped || []).filter(m=>String(m.seg)==='0').map(m=>m.aoc));
+    const indices=new Set(['NIFTY','NIFTY_2','NIFTY_M','BANKNIFTY','FINNIFTY','MIDCPNIFTY','SENSEX','BANKEX',...(map?.mapped || []).filter(m=>String(m.seg)==='0').map(m=>m.aoc)]);
     const commodities=new Set((map?.unmapped || []).filter(m=>(m.reason || '').includes("segment 'M'")).map(m=>m.aoc));
     const items=custom ? custom.symbols.map(name=>universe.find(t=>t.Name===name) || {Name:name}) : universe;
     let groups=custom ? [[custom.name,items]] : [['Indices',items.filter(t=>indices.has(t.Name))],
@@ -89,11 +101,7 @@
       groups=sectorGroups(custom.symbols).map(([name,symbols])=>[name,symbols.map(name=>resolve(name)||{Name:name})]);
     }
     if(selected==='sectors') {
-      const placed=new Set([...indices,...commodities]);
-      const sectorGroups=sectors.map(group=>[group.name,group.symbols.map(resolve).filter(t=>t&&!indices.has(t.Name)&&!commodities.has(t.Name))]);
-      for(const [,rows] of sectorGroups)for(const ticker of rows)placed.add(ticker.Name);
-      groups=[['Indices',items.filter(t=>indices.has(t.Name))],...sectorGroups,
-        ['Commodities',items.filter(t=>commodities.has(t.Name))],['Other / not classified',items.filter(t=>!placed.has(t.Name))]];
+      groups=sectorGroups(items.map(t=>t.Name)).map(([name,symbols])=>[name,symbols.map(name=>resolve(name)||{Name:name})]);
       const note=document.createElement('p');note.className='hint';note.textContent=sectorNote || 'Sector groups will load in background.';body.appendChild(note);
     }
     for (const [name,rows] of groups) {
@@ -136,7 +144,7 @@
   }
   function sectorGroups(symbols) {
     const remaining=new Set(symbols), groups=[];
-    const indices=new Set((map?.mapped || []).filter(m=>String(m.seg)==='0').map(m=>m.aoc));
+    const indices=new Set(['NIFTY','NIFTY_2','NIFTY_M','BANKNIFTY','FINNIFTY','MIDCPNIFTY','SENSEX','BANKEX',...(map?.mapped || []).filter(m=>String(m.seg)==='0').map(m=>m.aoc)]);
     function take(name, candidates) {
       const rows=[...new Set(candidates)].filter(symbol=>remaining.has(symbol));
       rows.forEach(symbol=>remaining.delete(symbol));
@@ -144,6 +152,8 @@
     }
     take('Indices',[...indices]);
     for(const group of sectors)take(group.name,group.symbols.map(s=>resolve(s)?.Name).filter(Boolean));
+    const commodities=(map?.unmapped || []).filter(m=>(m.reason || '').includes("segment 'M'")).map(m=>m.aoc);
+    take('Commodities',commodities);
     take('Other / not classified',[...remaining]);
     return groups;
   }

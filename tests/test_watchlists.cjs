@@ -23,7 +23,7 @@ function harness(storage=new Map(),fetch=async()=>{throw Error('offline');},publ
     querySelectorAll:s=>[...nodes.values()].flatMap(n=>n.querySelectorAll(s))};
   const clipboard={text:'',async writeText(text){this.text=text;}};
   const window={};if(published)vm.runInNewContext(fs.readFileSync('frontend/stock-sectors.js','utf8'),{window});vm.runInNewContext(fs.readFileSync('frontend/watchlists.js','utf8'),{document,window,localStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v)},fetch,navigator:{clipboard}});
-  return {api:window.watchlists,get,storage,clipboard};
+  return {api:window.watchlists,get,storage,clipboard,document};
 }
 function scan(root,count){root.replaceChildren();const table=new Node('table'),head=new Node('thead'),body=new Node('tbody');head.append(new Node('tr'));for(let i=0;i<count;i++)body.append(new Node('tr'));table.append(head,body);root.append(table);return body;}
 (async()=>{
@@ -56,6 +56,31 @@ function scan(root,count){root.replaceChildren();const table=new Node('table'),h
   h.get('wlClear').onclick();assert.deepEqual(JSON.parse(h.storage.get('fno-watchlists-v1')).lists.find(l=>l.id===id).symbols,[]);
   assert.equal(h.get('wlExport').disabled,true);
   h.get('wlDelete').onclick();assert(!JSON.parse(h.storage.get('fno-watchlists-v1')).lists.some(l=>l.id===id));
+  // Separate open tabs share storage; refresh must read it, preserving this tab's selection.
+  const shared=new Map(),tabA=harness(shared),tabB=harness(shared);
+  tabA.api.setUniverse(universe,null,()=>{});tabB.api.setUniverse(universe,null,()=>{});
+  tabA.api.add('default',['TCS']);tabB.api.refresh();
+  assert(tabB.get('wlSelect').children.some(n=>n.value==='default'));
+  tabB.get('wlSelect').value='default';tabB.get('wlSelect').onchange();
+  assert.equal(tabB.get('wlTradingView').value,'NSE:TCS');
+  tabA.api.add('default',['LT'],true);tabB.api.refresh();
+  assert.equal(tabB.get('wlSelect').value,'default');assert.equal(tabB.get('wlTradingView').value,'NSE:TCS,NSE:LT');
+  // A stale tab's next edit must not overwrite the other tab's additions.
+  tabA.api.add('default',['M&M']);tabB.api.add('default',['NIFTY']);
+  assert.deepEqual(JSON.parse(shared.get('fno-watchlists-v1')).lists[0].symbols,['TCS','LT','M&M','NIFTY']);
+  tabA.get('wlDelete').onclick();tabB.api.refresh();assert.equal(tabB.get('wlSelect').value,'all');
+  tabA.get('wlName').value='Created in tab A';tabA.get('wlCreate').onclick();const otherId=tabA.get('wlSelect').value;
+  const targetRoot=tabB.get('targetResults');scan(targetRoot,1);tabB.api.mount('targetResults',[{symbol:'TCS'}],'tabJob');
+  tabB.api.refresh();assert(targetRoot.children[0].children[1].children.some(n=>n.value===otherId));
+  tabB.get('wlSelect').value=otherId;tabB.get('wlSelect').onchange();tabA.api.add(otherId,['TCS']);tabB.api.refresh();
+  assert.equal(tabB.get('wlTradingView').value,'NSE:TCS');tabA.get('wlClear').onclick();tabB.api.refresh();assert.equal(tabB.get('wlTradingView').value,'');
+  const copy=harness();copy.api.setUniverse(universe,null,()=>{});copy.api.add('default',['TCS']);
+  copy.get('wlTradingView').focus=()=>{};copy.get('wlTradingView').select=()=>{};
+  let legacyCalls=0;copy.document.execCommand=cmd=>{assert.equal(cmd,'copy');legacyCalls++;copy.clipboard.text=copy.get('wlTradingView').value;return true;};
+  copy.clipboard.writeText=undefined;
+  for(const button of ['wlExport','wlExportGrouped','wlExportDhan'])await copy.get(button).onclick();
+  assert.equal(legacyCalls,3);assert.equal(copy.clipboard.text,'TCS');assert(copy.get('wlMessage').textContent.includes('copied'));
+  copy.clipboard.writeText=async()=>{throw Error('blocked');};await copy.get('wlExport').onclick();assert.equal(legacyCalls,4);
   // Cached sectors exclude indices from sector memberships and open without requests.
   const cache=new Map([['fno-watchlist-sectors-v1',JSON.stringify({groups:[{name:'IT',symbols:['TCS','NIFTY']} ]})]]);let calls=0;
   const c=harness(cache,async()=>{calls++;throw Error('should not fetch');});c.api.setUniverse(universe,{mapped:[{aoc:'NIFTY',seg:0}]},()=>{});

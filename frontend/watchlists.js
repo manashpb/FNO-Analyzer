@@ -40,16 +40,22 @@
     }catch(e){sectorNote=e.message+'. Use refresh to retry; uncategorized symbols remain available.';}
     finally{sectorLoading=false;render();}
   }
-  try {
-    const saved = JSON.parse(localStorage.getItem(key));
-    if (saved && Array.isArray(saved.lists)) {
-      const ids = new Set();
-      lists = saved.lists.filter(l => l && typeof l.id === 'string' && !['all','sectors'].includes(l.id) &&
-        typeof l.name === 'string' && Array.isArray(l.symbols) && !ids.has(l.id) && ids.add(l.id))
-        .map(l => ({id:l.id, name:l.name, grouped:l.grouped===true, symbols:[...new Set(l.symbols.filter(s => typeof s === 'string'))]}));
-      selected = ['all','sectors'].includes(saved.selected) || lists.some(l => l.id === saved.selected) ? saved.selected : 'all';
-    }
-  } catch (_) { /* Keep a usable default when browser storage is unavailable. */ }
+  function readSaved(preserveSelection=false) {
+    const previous=selected;
+    try {
+      const saved = JSON.parse(localStorage.getItem(key));
+      if (saved && Array.isArray(saved.lists)) {
+        const ids = new Set();
+        lists = saved.lists.filter(l => l && typeof l.id === 'string' && !['all','sectors'].includes(l.id) &&
+          typeof l.name === 'string' && Array.isArray(l.symbols) && !ids.has(l.id) && ids.add(l.id))
+          .map(l => ({id:l.id, name:l.name, grouped:l.grouped===true, symbols:[...new Set(l.symbols.filter(s => typeof s === 'string'))]}));
+        selected = ['all','sectors'].includes(saved.selected) || lists.some(l => l.id === saved.selected) ? saved.selected : 'all';
+      }
+      if(preserveSelection && (['all','sectors'].includes(previous)||lists.some(l=>l.id===previous)))selected=previous;
+      return true;
+    } catch (_) { return false; }
+  }
+  readSaved();
   const message = text => { $('wlMessage').textContent = text; };
   function save() {
     try { localStorage.setItem(key, JSON.stringify({lists, selected})); }
@@ -69,6 +75,7 @@
   }
   function resolve(symbol) { const name=String(symbol).trim().toUpperCase();return lookup.get(name) || (stockSectors[name] ? {Name:name,disp:stockSectors[name].name} : undefined); }
   function add(id, symbols, grouped=false) {
+    readSaved(true);
     const list=lists.find(l=>l.id===id);
     if (!list) return 'Create a watchlist and choose it first.';
     if (!ready) return 'Symbols are still loading. Try again in a moment.';
@@ -118,7 +125,7 @@
         entry.appendChild(button);
         if (custom) {
           const remove=document.createElement('button');remove.className='wl-remove';remove.textContent='Remove';remove.title='Remove '+ticker.Name+' from this watchlist';remove.setAttribute('aria-label','Remove '+ticker.Name);
-          remove.onclick=()=>{custom.symbols=custom.symbols.filter(s=>s!==ticker.Name);render();save();};entry.appendChild(remove);
+          remove.onclick=()=>{readSaved(true);const list=lists.find(l=>l.id===custom.id);if(list)list.symbols=list.symbols.filter(s=>s!==ticker.Name);render();save();};entry.appendChild(remove);
         }
         container.appendChild(entry);
       }
@@ -126,16 +133,17 @@
     }
     if (!body.children.length) body.textContent=custom ? 'This watchlist is empty. Add symbols or scanner results.' : 'Symbols are loading…';
   }
-  $('wlSelect').onchange=()=>{selected=$('wlSelect').value;message('');render();save();if(selected==='sectors')loadSectors();};
+  $('wlSelect').onchange=()=>{readSaved(true);selected=$('wlSelect').value;message('');render();save();if(selected==='sectors')loadSectors();};
   $('wlCreate').onclick=()=>{
+    readSaved(true);
     const name=$('wlName').value.trim();
     if(!name)return message('Enter a watchlist name.');
     if(lists.some(l=>l.name.toLowerCase()===name.toLowerCase()))return message('A watchlist with this name already exists.');
     const id='list-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);
     lists.push({id,name,symbols:[]});selected=id;$('wlName').value='';message('');render();save();
   };
-  $('wlClear').onclick=()=>{const list=lists.find(l=>l.id===selected);if(list){list.symbols=[];render();message('Watchlist cleared.');save();}};
-  $('wlDelete').onclick=()=>{lists=lists.filter(l=>l.id!==selected);selected='all';render();message('Watchlist deleted.');save();};
+  $('wlClear').onclick=()=>{const id=selected;readSaved(true);const list=lists.find(l=>l.id===id);if(list){list.symbols=[];render();message('Watchlist cleared.');save();}};
+  $('wlDelete').onclick=()=>{const id=selected;readSaved(true);lists=lists.filter(l=>l.id!==id);selected='all';render();message('Watchlist deleted.');save();};
   $('wlAdd').onclick=()=>{const result=add(selected,$('wlSymbols').value.split(/[,\n\r]+/));message(result);};
   function tradingViewSymbols(symbols) {
     const aliases = {NIFTY:'NSE:NIFTY', NIFTY_2:'NSE:NIFTY', BANKNIFTY:'NSE:BANKNIFTY', SENSEX:'BSE:SENSEX', BANKEX:'BSE:BANKEX', LARSEN:'NSE:LT', MAHINDRA:'NSE:M&M'};
@@ -165,17 +173,27 @@
   }
   async function copyExport(format) {
     const list=lists.find(l=>l.id===selected);if(!list?.symbols.length)return;
-    if(format==='grouped')await loadSectors();
+    // Keep copying in the click gesture; network waits can lose clipboard permission.
+    if(format==='grouped')loadSectors();
     const field=$('wlTradingView');
     field.value=format==='grouped' ? groupedTradingViewSymbols(list.symbols) : format==='dhan' ? dhanSymbols(list.symbols) : tradingViewSymbols(list.symbols);
     const target=format==='dhan' ? 'Dhan' : 'TradingView';
-    try {
-      await navigator.clipboard.writeText(field.value);
-      message(`${list.symbols.length} symbols copied. Paste into ${target}.`);
-    } catch (_) {
-      field.focus();field.select();
-      message(`Select and copy the ${target} string with Ctrl+C, then paste into ${target}.`);
+    const text=field.value;
+    const success=()=>message(`${list.symbols.length} symbols copied. Paste into ${target}.`);
+    function legacyCopy() {
+      field.focus();field.select();field.setSelectionRange?.(0,text.length);
+      try {return document.execCommand?.('copy')===true;} catch (_) {return false;}
     }
+    // execCommand also works on HTTP where navigator.clipboard is unavailable.
+    if(!navigator.clipboard?.writeText) {
+      if(legacyCopy())return success();
+    } else {
+      try {await navigator.clipboard.writeText(text);return success();} catch (_) {
+        if(legacyCopy())return success();
+      }
+    }
+    field.focus();field.select();
+    message(`Automatic copy was blocked. Press Ctrl+C to copy the selected ${target} string.`);
   }
   $('wlExport').onclick=()=>copyExport('flat');
   $('wlExportGrouped').onclick=()=>copyExport('grouped');
@@ -212,6 +230,6 @@
     for(const entry of map?.mapped || []){const ticker=lookup.get(String(entry.aoc).toUpperCase());if(ticker)for(const alias of [entry.ticker,entry.symbol,entry.sym,entry.dhan])if(alias)lookup.set(String(alias).toUpperCase(),ticker);}
     for(const [alias,name] of [['LARSEN','LT'],['NIFTY_2','NIFTY'],['MAHINDRA','M&M']]){const ticker=lookup.get(name);if(ticker)lookup.set(alias,ticker);}
     render();if(selected==='sectors')loadSectors();
-  },refresh(){render();if(selected==='sectors'||lists.find(l=>l.id===selected)?.grouped)loadSectors(true);},setActive(name){active=name;document.querySelectorAll('.wl-item').forEach(el=>el.classList.toggle('sel',el.dataset.name===active));}};
+  },refresh(){const loaded=readSaved(true);render();refreshTargets();message(loaded?'Watchlists refreshed from this browser.':'Browser storage unavailable. Could not refresh watchlists.');if(selected==='sectors'||lists.find(l=>l.id===selected)?.grouped)loadSectors(true);},setActive(name){active=name;document.querySelectorAll('.wl-item').forEach(el=>el.classList.toggle('sel',el.dataset.name===active));}};
   render();
 })();

@@ -19,8 +19,10 @@ from .services.metrics import compute_metrics
 from .services.scanners import IVScanner
 from .services.oi_history import OIHistoryStore
 from .services.oi_downloader import OIHistoryUpdater
+from .services.dhan_eod import DhanEODUpdater
 from .services.oi_zscore import OIZScoreService
 from .services.oi_levels import OILevelsScanner
+from .services.oi_calendar import USER_HOLIDAYS
 from .services.symbol_map import build_symbol_map, load_map, lookup_map, save_map
 
 IST = ZoneInfo("Asia/Kolkata")
@@ -32,14 +34,43 @@ class Application:
         self.aoc = AocClient(settings)
         self.dhan = DhanClient(settings)
         self.iv_scanner = IVScanner(self.dhan)
-        self.oi_history = OIHistoryUpdater(self.aoc,
+        archive_provider = settings.get('archive', {}).get('provider', 'dhan-temporary')
+        updater = DhanEODUpdater if archive_provider == 'dhan-temporary' else OIHistoryUpdater
+        self.oi_history = updater(self.dhan if archive_provider == 'dhan-temporary' else self.aoc,
             OIHistoryStore(Path(settings["data_path"]) / "oi_history.sqlite3"), settings["map_path"], self.dhan)
         self.oi_zscore = OIZScoreService(self.oi_history.store)
+        if archive_provider == 'dhan-temporary':
+            self.oi_history.rebuild_scores = self.oi_zscore.rebuild
         self.oi_levels = OILevelsScanner(self.oi_history.store)
         self.chain_cache = TTLCache(settings["cache"].get("chain_ttl_seconds", 6))
         self.scalper_cache = TTLCache(1)
         self.scalper_lock = Lock()
         self.map_lock = Lock()
+        self.optionchain_lock = Lock()
+        self.optionchain_cache = TTLCache(60)
+
+    def optionchain_live(self, ticker: str):
+        if ticker != 'NIFTY':
+            raise InvalidParameter('Dhan recorder currently supports NIFTY only')
+        now = datetime.now(IST)
+        if now.weekday() >= 5 or now.date().isoformat() in USER_HOLIDAYS:
+            raise ProviderError('No recording on configured non-trading days', code='MARKET_CLOSED', provider='dhan')
+        with self.optionchain_lock:
+            cached = self.optionchain_cache.get(ticker)
+            if cached is not None:
+                return cached
+            entry = self._entry(ticker)
+            chain = self._dhan_chain_data(entry)
+            acquired = datetime.fromisoformat(chain['refreshed_at'])
+            snapshot = dict(chain['snapshot'])
+            snapshot.update(dt=acquired.strftime('%d-%b-%Y'), ts=int(acquired.timestamp()*1000),
+                            timestamp_kind='snapshot-acquisition', source='dhan')
+            result = {'snapshot': snapshot, 'strikes': chain['_all_strikes'], 'source': 'dhan',
+                      'refreshed_at': acquired.isoformat(), 'timestamp_kind': 'snapshot-acquisition'}
+            if not result['strikes']:
+                raise ProviderError('Dhan returned an empty chain', provider='dhan')
+            self.optionchain_cache.set(ticker, result)
+            return result
 
     def ticker_meta(self, name: str, fallback: str | None = None) -> dict[str, Any] | None:
         query = name.upper()
@@ -153,6 +184,8 @@ class Application:
         return start_ms, end_ms
 
     def dispatch(self, path: str, query: dict[str, list[str]]) -> tuple[dict[str, Any], int]:
+        if path == '/api/optionchain/live':
+            return self.optionchain_live(self._ticker(query)), 200
         if path == '/api/scalper/chain':
             return self.scalper_chain(self._ticker(query), self._integer(query, 'expiry', minimum=1)), 200
         if path == "/api/scanners/oi-levels/run":

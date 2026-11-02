@@ -313,12 +313,12 @@
     <div class="scanner-panel-header"><h2>Historical ATM OI database</h2><div class="scanner-panel-actions"><button type="button" class="scanner-clear">Clear results</button><button type="button" class="scanner-collapse" aria-expanded="true" aria-controls="oiPanelBody">Collapse</button></div></div>
     <div id="oiPanelBody" class="scanner-panel-body">
 
-    <p class="hint">Daily closing chains including Greeks for the nearest expiry · trailing calendar year · current AOC NSE F&amp;O stocks. Saved dates are skipped and download gaps are resumed.</p>
+    <p class="hint">Temporary Dhan EOD collection for today’s nearest-expiry stock chains, including Greeks. Existing AOC history is retained; saved dates are skipped. ATM OI Z-scores recalculate after collection.</p>
     <div class="scanner-controls">
       <button id="oiUpdate" type="button">Data update</button>
       <button id="oiCancel" type="button" disabled>Cancel update</button>
     </div>
-    <p class="hint">Initial backfill can take many hours. AOC requests are serialized and paced. Your supplied holidays are excluded. If the first six stock fetches for a date are unavailable, remaining stocks for that date are skipped and the decision is remembered. Current-day data is excluded. Calendar DTE includes holidays; session DTE needs a complete exchange calendar.</p>
+    <p class="hint">Dhan collection waits until 16:00 IST and fetches each missing stock once, with 6–9 seconds between stocks. Holidays are excluded. Authentication, transport or rate-limit errors stop the job. Snapshots use acquisition time because an exchange observation timestamp is unavailable. Z-scores use raw OI; cross-provider comparability remains unverified.</p>
     <p id="oiStatus" role="status" aria-live="polite">Loading archive status…</p>
     <p id="oiCoverage" class="hint"></p>
     <details><summary>Stock coverage and exclusions</summary><div id="oiStocks" class="scanner-table"></div></details>

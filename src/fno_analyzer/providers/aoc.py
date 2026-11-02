@@ -1,5 +1,7 @@
 import time
 import math
+import os
+from pathlib import Path
 from threading import Lock
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
@@ -73,6 +75,7 @@ class AocClient:
         self._active_server = self.v27_base_url
         self._failed_servers: dict[str, float] = {}
         self.token = str(config.get("token") or "")
+        self.pause_file = Path(os.getenv("FNO_AOC_PAUSE_FILE", str(Path(__file__).resolve().parents[3] / "AOC_PAUSED")))
         self.timeout = float(settings["server"].get("request_timeout_seconds", 30))
         self.cache_ttl = float(settings["cache"].get("ticker_ttl_seconds", 21600))
         self.session = requests.Session()
@@ -91,12 +94,18 @@ class AocClient:
 
     @property
     def configured(self) -> bool:
-        return bool(self.token and self.base_url)
+        return bool(self.token and self.base_url and not self.pause_file.exists())
+
+    def _check_paused(self):
+        if self.pause_file.exists():
+            raise ProviderError("AOC requests are paused by the administrator", code="AOC_PAUSED",
+                                provider=self.name, retryable=False)
 
     def _url(self, endpoint: str) -> str:
         return f"{self.base_url}/{ENDPOINTS[endpoint]}"
 
     def _get(self, endpoint: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+        self._check_paused()
         with self._request_lock:
             if time.monotonic() < self._cooldown_until:
                 raise ProviderError("AOC rate-limit cooldown is active", code="AOC_RATE_LIMIT", provider=self.name)
@@ -105,6 +114,7 @@ class AocClient:
             return self._request(endpoint, params)
 
     def _request(self, endpoint: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+        self._check_paused()
         if not self.configured:
             raise ConfigurationError(
                 "AOC is not configured; set providers.aoc.token or FNO_AOC_TOKEN",
@@ -164,6 +174,7 @@ class AocClient:
             if index:
                 time.sleep(max(0, self.request_interval - (time.monotonic() - self._last_request)))
             self._last_request = time.monotonic()
+            self._check_paused()
             try:
                 response = self.session.get(f"{server}/{name}", params=params,
                                             timeout=(min(5.0, self.timeout), self.timeout))

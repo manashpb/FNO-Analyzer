@@ -55,6 +55,7 @@ def validate_snapshot(task, data, cutoff):
 
 
 class OIHistoryUpdater:
+    provider_name = "aoc"
     def __init__(self, aoc, store, map_path, symbol_client=None):
         self.aoc, self.store, self.map_path = aoc, store, map_path
         self.symbol_client = symbol_client
@@ -67,7 +68,8 @@ class OIHistoryUpdater:
         with self.lock:
             state = deepcopy(self.state)
         state["archive"] = self.store.cached_status()
-        state["request_interval_seconds"] = self.aoc.request_interval
+        state["request_interval_seconds"] = getattr(self.aoc, "request_interval", 6)
+        state["provider"] = self.provider_name
         return state
 
     def _update(self, **values):
@@ -76,7 +78,7 @@ class OIHistoryUpdater:
 
     def start(self):
         if not self.aoc.configured:
-            raise ConfigurationError("Configure AOC before updating the archive")
+            raise ConfigurationError(f"Configure {self.provider_name} before updating the archive")
         with self.lock:
             if self.state["status"] == "running":
                 raise AppError("An OI history update is already running", code="UPDATE_RUNNING", status=409)

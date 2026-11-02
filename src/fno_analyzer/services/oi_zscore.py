@@ -129,7 +129,7 @@ class OIZScoreService:
             rows = [dict(r) for r in db.execute('''SELECT c.symbol,c.day,c.expiry,
                 c.calendar_dte,c.atm_strike,c.call_oi,c.put_oi,c.oi_unit,c.lot_size
                 FROM chains c JOIN universe u ON u.symbol=c.symbol WHERE u.active=1
-                AND c.day>=? AND c.day<? ORDER BY c.symbol,c.day''',
+                AND c.day>=? AND c.day<=? ORDER BY c.symbol,c.day''',
                 (months_before(today, 24).isoformat(), today.isoformat()))]
             source_count = db.execute('SELECT COUNT(*) FROM chains').fetchone()[0]
             source_last = db.execute('SELECT MAX(fetched_at) FROM chains').fetchone()[0]
@@ -148,6 +148,12 @@ class OIZScoreService:
                 periods[str(months)] = {label: score(baseline(history, day, target['expiry'],
                     target['calendar_dte'], months, side), target[side])
                     for label, side in [('ce', 'call_oi'), ('pe', 'put_oi')]}
+                for stats in periods[str(months)].values():
+                    if any(s['oi_unit'] != target['oi_unit'] for s in stats['samples']):
+                        stats.update(z=None, reason='Incompatible OI units')
+                    elif target['lot_size'] is not None and any(s['lot_size'] is not None and
+                            s['lot_size'] != target['lot_size'] for s in stats['samples']):
+                        stats.update(z=None, reason='Historical lot size changed')
             stored_scores.append((symbol, json.dumps(dict(symbol=symbol, day=target['day'],
                 expiry=target['expiry'], dte=target['calendar_dte'], atm_strike=target['atm_strike'],
                 periods=periods), allow_nan=False)))
@@ -162,6 +168,7 @@ class OIZScoreService:
         meta = dict(as_of=today.isoformat(), updated_at=datetime.now(IST).isoformat(),
                     source_count=source_count, source_last=source_last, stocks=len(grouped),
                     method='sample', minimum_samples=MIN_SAMPLES, oi_basis='raw', expiry_class='monthly',
+                    provider_note='Temporary Dhan EOD may be included; raw OI cross-provider comparability unverified',
                     dte_policy='previous_available_except_0_1')
         # Atomic replacement preserves the previous generation on failure/restart.
         with self.store.connect() as db:

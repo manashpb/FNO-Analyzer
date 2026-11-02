@@ -7,6 +7,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULTS: dict[str, Any] = {
+    "archive": {"provider": "dhan-temporary"},
     "server": {
         "host": "127.0.0.1",
         "port": 8000,
@@ -96,6 +97,9 @@ def load_settings(config_path: str | Path | None = None) -> dict[str, Any]:
     with path.open("r", encoding="utf-8") as handle:
         raw = json.load(handle)
     settings = _merge(deepcopy(DEFAULTS), raw)
+    settings['archive']['provider'] = os.getenv('FNO_OI_ARCHIVE_PROVIDER', settings['archive']['provider'])
+    if settings['archive']['provider'] not in ('aoc', 'dhan-temporary'):
+        raise ValueError('FNO_OI_ARCHIVE_PROVIDER must be aoc or dhan-temporary')
 
     server = settings["server"]
     server["host"] = os.getenv("FNO_SERVER_HOST", server.get("host", "127.0.0.1"))

@@ -478,3 +478,7 @@ AOC v27 requests fail over between the two official API mirrors on transport err
 and HTTP 5xx, retain the working host, and skip failed hosts for five minutes.
 Authentication, 404 and rate-limit errors do not trigger failover; existing global
 pacing and rate-limit cooldown remain in force. Custom v27 URLs stay isolated.
+
+AOC pause: create AOC_PAUSED at the repository root (FNO_AOC_PAUSE_FILE overrides the path). Requests fail locally with AOC_PAUSED while this marker exists. It must remain until the user explicitly resumes AOC.
+
+Temporary Dhan archive mode is the default (FNO_OI_ARCHIVE_PROVIDER=dhan-temporary); aoc restores the original downloader only after AOC is explicitly resumed. Data update collects today only, waiting until 16:00 IST; saved chains are skipped, requests are 6–9 seconds apart, and any provider failure stops the job. Full chains retain acquisition-time provenance (no fabricated exchange timestamp), raw/unknown OI basis, and unverified cross-provider comparability. Z-score rebuild includes today’s EOD target and runs after collection. AOC_PAUSED remains in place. /api/optionchain/live supplies full Dhan NIFTY chains with a 60-second shared cache and acquisition timestamps. Shared Dhan POST calls serialize with pacing, global cooldown/Retry-After handling and an authentication circuit until Token Sync restarts FNO.

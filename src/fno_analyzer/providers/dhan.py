@@ -1,5 +1,6 @@
 import json
 import time
+from random import uniform
 from threading import Lock
 from datetime import datetime
 from typing import Any
@@ -109,6 +110,8 @@ def _row_from_option(option: dict[str, Any], side: str) -> dict[str, Any]:
         f"{prefix}D": number(greek.get("delta")),
         f"{prefix}G": number(greek.get("gamma")),
         f"{prefix}T": number(greek.get("theta")),
+        f"{prefix}Th": number(greek.get("theta")),
+        f"{prefix}V": number(greek.get("vega")),
         f"{prefix}Bid": number(option.get("bid")),
         f"{prefix}Ask": number(option.get("ask")),
     }
@@ -251,6 +254,10 @@ class DhanClient:
         self.analytics_segments = config.get("analytics_segments") or {"0": 0, "2": 1}
         self.timeout = float(settings["server"].get("request_timeout_seconds", 30))
         self.session = requests.Session()
+        self.request_lock = Lock()
+        self.next_request = 0.0
+        self.cooldown_until = 0.0
+        self.blocked_jwt = None
 
     @property
     def configured(self) -> bool:
@@ -271,6 +278,25 @@ class DhanClient:
         return headers
 
     def _post(self, url: str, payload: dict[str, Any]) -> dict[str, Any]:
+        with self.request_lock:
+            if self.blocked_jwt == self.jwt:
+                raise ProviderAuthError(self.name, 'Dhan authentication paused; refresh the Dhan JWT')
+            if time.monotonic() < self.cooldown_until:
+                raise ProviderError('Dhan cooldown is active', code='DHAN_RATE_LIMIT', provider=self.name)
+            time.sleep(max(0, self.next_request - time.monotonic()))
+            try:
+                return self._post_request(url, payload)
+            except ProviderAuthError:
+                self.blocked_jwt = self.jwt
+                raise
+            except ProviderError as exc:
+                self.cooldown_until = max(self.cooldown_until, self.analytics_next_request
+                    if exc.code == 'DHAN_RATE_LIMIT' else time.monotonic() + 60)
+                raise
+            finally:
+                self.next_request = time.monotonic() + uniform(1, 1.5)
+
+    def _post_request(self, url: str, payload: dict[str, Any]) -> dict[str, Any]:
         if not self.configured:
             raise ConfigurationError(
                 "Dhan is not configured; set providers.dhan.jwt or FNO_DHAN_JWT",

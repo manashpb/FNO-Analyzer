@@ -188,3 +188,9 @@ Storage migration and compaction:
   The backup consumes additional disk space and can be moved to backup storage
   after verification. Allow space for the backup and VACUUM's temporary file.
   Older application versions must not write to a schema-v4 archive.
+
+## Temporary Dhan EOD mode
+
+The default archive provider is now `dhan-temporary`; `FNO_OI_ARCHIVE_PROVIDER=aoc` restores the original AOC downloader after explicit approval to resume AOC. Keep `AOC_PAUSED` until then. Data update collects only today, at or after 16:00 IST, using saved mapped NSE stocks. It skips existing stock/date chains, waits 6–9 seconds between missing stocks, and stops on provider failure. Cancellation and partial-job resume remain available. No older dates are reconstructed from live Dhan quotes.
+
+Dhan full chains store explicit temporary-source and acquisition-time provenance; no exchange observation timestamp is invented. Raw OI retains the existing unknown unit basis so the requested temporary EOD chains participate in Z-scores; cross-provider comparability is unverified and surfaced in metadata/UI. Today’s EOD target is included in the stored score rebuild, while baseline samples remain strictly earlier observations from prior expiries. The rebuild runs after collection completes, and existing lot/unit mismatch protections remain active.

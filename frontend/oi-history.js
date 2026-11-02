@@ -19,7 +19,7 @@
     $("oiUpdate").disabled = running || pending;
     $("oiCancel").disabled = !running || pending;
     const archive = next.archive;
-    if (next.status === "idle") $("oiStatus").textContent = "Click Data update to collect today’s temporary Dhan EOD chains after 16:00 IST, then recalculate ATM OI Z-scores.";
+    if (next.status === "idle") $("oiStatus").textContent = next.provider === "dhan-temporary" ? "Click Data update to collect today’s temporary Dhan EOD chains after 16:00 IST, then recalculate ATM OI Z-scores." : "Click Data update to backfill or resume the daily AOC archive.";
     else $("oiStatus").textContent = `${next.status} · ${next.phase} · ${fmt(next.discovered)}/1 shared expiry list · ${fmt(next.expiries_applied)}/${fmt(next.symbols)} stocks prepared · ${fmt(next.processed ?? next.checked)}/${fmt(next.total)} tasks processed · ${fmt(next.checked)} fetched · ${fmt(next.saved)} saved · ${fmt(next.unavailable)} unavailable · ${fmt(next.skipped_tasks)} skipped after day sampling · ${fmt(next.errors)} errors${next.current ? " · " + next.current : ""}${next.error ? " · " + next.error : ""}`;
     const hours = next.minimum_seconds ? ` · At least ${(next.minimum_seconds / 3600).toFixed(1)} hours of request pacing for this update` : "";
     $("oiCoverage").textContent = `${fmt(archive.chains)} snapshots stored · ${fmt(archive.coverage.length)} stocks with data · ${fmt(archive.retry_exhausted)} stock/date/expiry gaps excluded after ${archive.max_error_attempts ?? 3} failed attempts · ${next.request_interval_seconds}s minimum between ${next.provider ?? "AOC"} requests${hours}${next.provider === "dhan-temporary" ? " · Today only · Dhan acquisition time · raw OI comparability with AOC unverified" : ""}`;

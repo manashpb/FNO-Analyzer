@@ -20,6 +20,8 @@ ENDPOINTS = {
     "sector_components": "sectorial-components-compact",
 }
 
+V27_SERVERS = ("https://v27.aoccalculator.in/api/v27", "https://v27.niftychain.in/api/v27")
+
 
 def number(value: Any) -> Any:
     if value is None or isinstance(value, bool):
@@ -64,6 +66,12 @@ class AocClient:
         self.base_url = str(config.get("base_url", "")).rstrip("/")
         self.api_mode = str(config.get("api_mode", "legacy"))
         self.v27_base_url = str(config.get("v27_base_url", "https://v27.aoccalculator.in/api/v27")).rstrip("/")
+        # Only share credentials between the two official mirrors. Custom URLs stay isolated.
+        self._v27_servers = [self.v27_base_url]
+        if self.v27_base_url in V27_SERVERS:
+            self._v27_servers += [url for url in V27_SERVERS if url != self.v27_base_url]
+        self._active_server = self.v27_base_url
+        self._failed_servers: dict[str, float] = {}
         self.token = str(config.get("token") or "")
         self.timeout = float(settings["server"].get("request_timeout_seconds", 30))
         self.cache_ttl = float(settings["cache"].get("ticker_ttl_seconds", 21600))
@@ -107,12 +115,15 @@ class AocClient:
                if self.api_mode == "v27" else
                f"{self.history_base_url}/{ENDPOINTS[endpoint]}"
                if endpoint in ("historical", "expiries") else self._url(endpoint))
-        try:
-            response = self.session.get(url, params=params, timeout=self.timeout)
-        except requests.Timeout as exc:
-            raise UpstreamTimeout(self.name, "AOC request timed out") from exc
-        except requests.RequestException as exc:
-            raise ProviderError("AOC request failed", provider=self.name) from exc
+        if self.api_mode == "v27":
+            response = self._v27_get(name, params)
+        else:
+            try:
+                response = self.session.get(url, params=params, timeout=self.timeout)
+            except requests.Timeout as exc:
+                raise UpstreamTimeout(self.name, "AOC request timed out") from exc
+            except requests.RequestException as exc:
+                raise ProviderError("AOC request failed", provider=self.name) from exc
         if response.status_code in (401, 403):
             raise ProviderAuthError(self.name, "AOC authentication failed; refresh the AOC token")
         if response.status_code == 404:
@@ -143,6 +154,34 @@ class AocClient:
             message = str(payload.get("message") or "AOC request was rejected")
             raise ProviderError(message[:240], code="AOC_STATUS_ERROR", provider=self.name)
         return payload
+
+    def _v27_get(self, name: str, params: dict[str, Any] | None):
+        servers = [self._active_server] + [s for s in self._v27_servers if s != self._active_server]
+        available = [s for s in servers if self._failed_servers.get(s, 0) <= time.monotonic()]
+        if not available:
+            raise ProviderError("AOC servers temporarily unavailable; retry shortly", provider=self.name)
+        for index, server in enumerate(available):
+            if index:
+                time.sleep(max(0, self.request_interval - (time.monotonic() - self._last_request)))
+            self._last_request = time.monotonic()
+            try:
+                response = self.session.get(f"{server}/{name}", params=params,
+                                            timeout=(min(5.0, self.timeout), self.timeout))
+            except requests.RequestException as exc:
+                self._failed_servers[server] = time.monotonic() + 300
+                if index + 1 < len(available):
+                    continue
+                if isinstance(exc, requests.Timeout):
+                    raise UpstreamTimeout(self.name, "AOC servers timed out") from exc
+                raise ProviderError("AOC servers could not be reached", provider=self.name) from exc
+            if response.status_code >= 500:
+                self._failed_servers[server] = time.monotonic() + 300
+                if index + 1 < len(available):
+                    continue
+            else:
+                self._active_server = server
+                self._failed_servers.pop(server, None)
+            return response
 
     def get_tickers(self, force: bool = False) -> list[dict[str, Any]]:
         if not force and self._tickers is not None and time.monotonic() - self._tickers_at < self.cache_ttl:

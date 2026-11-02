@@ -473,3 +473,8 @@ table. Each side explains its applied SL/target direction and always shows quote
 Greeks. Buy is green and Sell red; the calculation method is expandable.
 Changing the shared strike count immediately rebuilds both dropdowns locally,
 preserving selected strikes within the window and falling back to ATM otherwise.
+
+AOC v27 requests fail over between the two official API mirrors on transport errors
+and HTTP 5xx, retain the working host, and skip failed hosts for five minutes.
+Authentication, 404 and rate-limit errors do not trigger failover; existing global
+pacing and rate-limit cooldown remain in force. Custom v27 URLs stay isolated.

@@ -47,7 +47,7 @@ class Application:
         self.scalper_lock = Lock()
         self.map_lock = Lock()
         self.optionchain_lock = Lock()
-        self.optionchain_cache = TTLCache(60)
+        self.optionchain_cache = TTLCache(25)
 
     def optionchain_live(self, ticker: str):
         if ticker != 'NIFTY':

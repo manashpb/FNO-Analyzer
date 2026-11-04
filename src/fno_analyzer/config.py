@@ -7,7 +7,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULTS: dict[str, Any] = {
-    "archive": {"provider": "dhan-temporary"},
+    "archive": {"provider": "aoc"},
     "server": {
         "host": "127.0.0.1",
         "port": 8000,

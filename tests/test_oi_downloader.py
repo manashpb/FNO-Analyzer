@@ -86,7 +86,9 @@ class UpdaterTests(unittest.TestCase):
         plan = self.store.iter_candidate_days
         for hour, minute, second, expected_end, expected_saved in (
             (15, 59, 59, "2026-10-05", 0),
-            (16, 0, 0, "2026-10-06", 1),
+            (16, 0, 0, "2026-10-05", 0),
+            (16, 59, 59, "2026-10-05", 0),
+            (17, 0, 0, "2026-10-06", 1),
             (18, 0, 0, "2026-10-06", 0),
         ):
             with self.subTest(hour=hour, minute=minute, second=second):

@@ -3,7 +3,8 @@ import math
 import os
 from pathlib import Path
 from threading import Lock
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta, time as clock_time
+from zoneinfo import ZoneInfo
 from email.utils import parsedate_to_datetime
 from typing import Any
 
@@ -75,6 +76,7 @@ class AocClient:
         self._active_server = self.v27_base_url
         self._failed_servers: dict[str, float] = {}
         self.token = str(config.get("token") or "")
+        self.backtester_only = os.getenv("FNO_AOC_BACKTESTER_ONLY", "1") != "0"
         self.pause_file = Path(os.getenv("FNO_AOC_PAUSE_FILE", str(Path(__file__).resolve().parents[3] / "AOC_PAUSED")))
         self.timeout = float(settings["server"].get("request_timeout_seconds", 30))
         self.cache_ttl = float(settings["cache"].get("ticker_ttl_seconds", 21600))
@@ -106,6 +108,17 @@ class AocClient:
 
     def _get(self, endpoint: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         self._check_paused()
+        if self.backtester_only:
+            if endpoint not in ("tickers", "expiries", "historical"):
+                raise ProviderError("AOC account supports backtester only", code="AOC_BACKTESTER_ONLY", provider=self.name)
+            if endpoint == "historical":
+                now = datetime.now(ZoneInfo("Asia/Kolkata"))
+                requested = datetime.fromtimestamp(float((params or {}).get("timestamp", 0)) / 1000, now.tzinfo)
+                allowed = requested <= now - timedelta(hours=8)
+                if now.time() >= clock_time(17) and requested.date() == now.date() and requested <= now:
+                    allowed = True
+                if not allowed:
+                    raise ProviderError("AOC history requires an eight-hour delay; today's close is available after 17:00 IST", code="AOC_HISTORY_DELAY", provider=self.name)
         with self._request_lock:
             if time.monotonic() < self._cooldown_until:
                 raise ProviderError("AOC rate-limit cooldown is active", code="AOC_RATE_LIMIT", provider=self.name)

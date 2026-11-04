@@ -118,8 +118,8 @@ class OIHistoryUpdater:
     def _download(self):
         now = datetime.now(IST)
         today = now.date()
-        # The closing snapshot request is safe once its 16:00 IST cutoff has passed.
-        end = today if now.time() >= time(16) else today - timedelta(days=1)
+        # Backtester account releases today's historical close at 17:00 IST.
+        end = today if now.time() >= time(17) else today - timedelta(days=1)
         try:
             start = today.replace(year=today.year - 1)
         except ValueError:
@@ -133,6 +133,7 @@ class OIHistoryUpdater:
         excluded_names = NON_STOCKS | {row["aoc"].upper() for row in mapping.get("mapped", []) if row.get("seg") == 0}
         with self.store.connect() as db:
             stocks.update(row[0] for row in db.execute("SELECT symbol FROM universe"))
+        unclassified = []
         for ticker in tickers:
             name = str(ticker.get("Name", "")).upper()
             if name in stocks or name in excluded_names:
@@ -140,17 +141,25 @@ class OIHistoryUpdater:
             if self.stop.is_set():
                 return
             if self.symbol_client is None:
-                raise ConfigurationError("Cannot classify new AOC symbols", code="STOCK_CLASSIFICATION_REQUIRED")
+                unclassified.append({"symbol": name, "reason": "Dhan symbol search unavailable"})
+                continue
             alias = ALIASES.get(name, name)
             row = _match_row(alias, self.symbol_client.search(alias))
             if row is None:
-                raise ConfigurationError("Cannot classify a new AOC symbol", code="STOCK_CLASSIFICATION_REQUIRED")
-            if row.get("Seg_s") == "E" and row.get("d_exch_t") == "NSE":
+                rows = self.symbol_client.search(alias, all_rows=True)
+                row = _match_row(alias, rows) or _match_row(name, rows)
+            if row is None:
+                unclassified.append({"symbol": name, "reason": "No exact Dhan symbol match"})
+                continue
+            segment = str(row.get("Seg_s") or "").upper()
+            exchange = str(row.get("d_exch_t") or "").upper()
+            if segment == "E" and exchange == "NSE":
                 stocks.add(name)
-            elif row.get("Seg_s") == "I":
+            elif segment == "I":
                 excluded_names.add(name)
             else:
-                raise ConfigurationError("Unsupported AOC symbol classification", code="STOCK_CLASSIFICATION_REQUIRED")
+                unclassified.append({"symbol": name, "reason": "No confirmed NSE equity classification"})
+        self._update(unclassified=unclassified)
         universe = [row for row in tickers if str(row.get("Name", "")).upper() in stocks]
         if not universe:
             raise ConfigurationError("No mapped AOC stocks", code="STOCK_MAP_REQUIRED")

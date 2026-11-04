@@ -30,6 +30,11 @@
       note.textContent = `Excluded (indices, commodities or unclassified symbols): ${next.excluded.join(", ")}`;
       $("oiStocks").appendChild(note);
     }
+    if (next.unclassified?.length) {
+      const note = document.createElement("p");
+      note.textContent = `Classification required — skipped this update; confirmed stocks continue: ${next.unclassified.map(row => `${row.symbol} (${row.reason})`).join(", ")}. Retried on the next Data update.`;
+      $("oiStocks").appendChild(note);
+    }
     if (archive.day_skips?.length) {
       const note = document.createElement("p");
       note.textContent = `Dates skipped after six unavailable stock fetches: ${archive.day_skips.map(row => row.day).join(", ")}`;
